@@ -20,26 +20,28 @@ jobs:
             export PATH=/usr/local/bin:/usr/bin:/usr/sbin:$PATH
             cd /opt/openbuild
 
-            # Stop API before updating files
+            # Stop API before updating
             sudo systemctl stop openbuild-api
 
             # Pull latest
             git pull origin main
 
+            # Install all workspace deps from root
+            npm ci
+
             # Build API
             cd apps/api
-            npm ci --production=false
             npx tsc
 
             # Build frontend
             cd ../web
-            npm ci --production=false
             npm run build
 
             # Start API
+            cd /opt/openbuild
             sudo systemctl start openbuild-api
 
-            # Wait for healthy (retry up to 10s)
+            # Wait for healthy
             for i in 1 2 3 4 5; do
               sleep 2
               if curl -sf http://localhost:41935/health > /dev/null 2>&1; then
