@@ -1,19 +1,16 @@
 [Unit]
 Description=OpenBuild API Server
-After=network.target docker.service
-Requires=docker.service
+After=network.target
 
 [Service]
 Type=simple
-User=openbuild
-Group=openbuild
+User=ec2-user
 WorkingDirectory=/opt/openbuild/apps/api
 EnvironmentFile=/opt/openbuild/.env
+Environment=PATH=/usr/local/bin:/usr/bin:/usr/sbin
 ExecStart=/usr/bin/node dist/server.js
 Restart=always
 RestartSec=5
-StandardOutput=journal
-StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
