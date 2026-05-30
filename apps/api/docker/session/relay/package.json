@@ -1,0 +1,8 @@
+{
+  "name": "openbuild-session-relay",
+  "version": "2.0.0",
+  "type": "module",
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

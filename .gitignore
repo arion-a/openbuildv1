@@ -1,0 +1,27 @@
+node_modules/
+dist/
+.env
+
+# Sensitive files
+*.pem
+*-firebase-adminsdk-*.json
+open-build-prod-*.json
+
+# Export/design files
+figma-export/
+
+# Build artifacts / archives
+openbuild.zip
+*.zip
+
+# Large/misc files
+ChatGPT Image*.png
+BuildStream feature.make
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

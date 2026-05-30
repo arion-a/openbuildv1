@@ -1,0 +1,15 @@
+{
+  "name": "openbuild",
+  "private": true,
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
+    "dev:api": "cd apps/api && npm run dev",
+    "dev:web": "cd apps/web && npm run dev",
+    "build": "npm run build --workspaces",
+    "infra": "cd apps/api && docker compose up -d"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

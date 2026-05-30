@@ -1,0 +1,28 @@
+# Cloudflare Tunnel configuration
+# Place this at ~/.cloudflared/config.yml after creating the tunnel
+#
+# Replace <TUNNEL_ID> with your actual tunnel ID
+# Replace yourdomain.com with your actual domain
+
+tunnel: <TUNNEL_ID>
+credentials-file: /home/ec2-user/.cloudflared/<TUNNEL_ID>.json
+
+ingress:
+  # API server
+  - hostname: api.yourdomain.com
+    service: http://localhost:41935
+
+  # Gitea (git hosting)
+  - hostname: git.yourdomain.com
+    service: http://localhost:3000
+
+  # Session subdomains (wildcard) → same API server handles routing
+  - hostname: "*.yourdomain.com"
+    service: http://localhost:41935
+
+  # Main web app (catch-all for the bare domain)
+  - hostname: yourdomain.com
+    service: http://localhost:5173
+
+  # Required catch-all
+  - service: http_status:404

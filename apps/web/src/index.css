@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+:root {
+  --bg-primary: #0a0e1a;
+  --bg-secondary: #111827;
+  --bg-card: #0f172a;
+  --bg-card-hover: #1e293b;
+  --accent: #06b6d4;
+  --accent-hover: #22d3ee;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --border-color: rgba(30, 58, 138, 0.3);
+}
+
+body {
+  margin: 0;
+  background: linear-gradient(to bottom right, #020617, #172554, #0f172a);
+  background-attachment: fixed;
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+#root {
+  min-height: 100vh;
+}

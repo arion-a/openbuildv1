@@ -1,0 +1,33 @@
+# OpenBuild Production Caddyfile
+# Used with Cloudflare Tunnel (no TLS termination here — tunnel handles it)
+# Replace yourdomain.com with your actual domain
+
+{
+	auto_https off
+}
+
+:80 {
+	# Web app (frontend)
+	@web host yourdomain.com www.yourdomain.com
+	handle @web {
+		reverse_proxy localhost:5173
+	}
+
+	# API server + session subdomains all go to the API
+	@api host api.yourdomain.com
+	handle @api {
+		reverse_proxy localhost:41935
+	}
+
+	# Gitea
+	@git host git.yourdomain.com
+	handle @git {
+		reverse_proxy localhost:3000
+	}
+
+	# Session subdomains: s-{sessionId}.yourdomain.com → API handles routing
+	@session host *.yourdomain.com
+	handle @session {
+		reverse_proxy localhost:41935
+	}
+}
