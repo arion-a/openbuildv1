@@ -20,6 +20,9 @@ jobs:
             export PATH=/usr/local/bin:/usr/bin:/usr/sbin:$PATH
             cd /opt/openbuild
 
+            # Stop API before updating files
+            sudo systemctl stop openbuild-api
+
             # Pull latest
             git pull origin main
 
@@ -33,8 +36,8 @@ jobs:
             npm ci --production=false
             npm run build
 
-            # Restart via systemd
-            sudo systemctl restart openbuild-api
+            # Start API
+            sudo systemctl start openbuild-api
 
             # Wait for healthy (retry up to 10s)
             for i in 1 2 3 4 5; do
