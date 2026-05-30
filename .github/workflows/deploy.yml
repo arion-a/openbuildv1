@@ -1,0 +1,42 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/openbuild
+
+            # Pull latest
+            git pull origin main
+
+            # Build API
+            cd apps/api
+            npm ci --production=false
+            npx tsc
+
+            # Build frontend
+            cd ../web
+            npm ci --production=false
+            npm run build
+
+            # Restart API
+            cd /opt/openbuild/apps/api
+            export PATH=/usr/local/bin:/usr/bin:/usr/sbin:$PATH
+            set -a && source /opt/openbuild/.env && set +a
+            pkill -f "node dist/server" || true
+            sleep 2
+            nohup node dist/server.js > /tmp/openbuild-api.log 2>&1 &
+            sleep 2
+            curl -sf http://localhost:41935/health
