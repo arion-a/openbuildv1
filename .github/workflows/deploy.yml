@@ -35,5 +35,13 @@ jobs:
 
             # Restart via systemd
             sudo systemctl restart openbuild-api
-            sleep 3
-            curl -sf http://localhost:41935/health
+
+            # Wait for healthy (retry up to 10s)
+            for i in 1 2 3 4 5; do
+              sleep 2
+              if curl -sf http://localhost:41935/health > /dev/null 2>&1; then
+                echo "Deploy successful — API healthy"
+                exit 0
+              fi
+            done
+            echo "API failed to start" && exit 1
