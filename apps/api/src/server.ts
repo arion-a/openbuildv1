@@ -24,6 +24,7 @@ import { pool, ensureMakerColumns, ensureBuildColumns, ensureDiscussionColumns, 
 import { makerRoutes } from './routes/makers.js';
 import { publicationRoutes } from './routes/publications.js';
 import { waitlistRoutes } from './routes/waitlist.js';
+import { registerMetaRoutes } from './routes/meta.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -121,6 +122,9 @@ app.get('/health', async () => ({ status: 'ok' }));
 // Serve frontend static files in production
 const webDist = join(__dirname, '../../web/dist');
 if (existsSync(webDist)) {
+  // Per-page OG tags for shared build/idea/maker links — must be registered
+  // before the static wildcard so these parametric routes win.
+  registerMetaRoutes(app, webDist);
   await app.register(fastifyStatic, { root: webDist, wildcard: true, prefix: '/' });
   app.setNotFoundHandler((request, reply) => {
         if (request.url.startsWith('/auth') || request.url.startsWith('/waitlist') || request.url.startsWith('/makers') || request.url.startsWith('/projects') ||
