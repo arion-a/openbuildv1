@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Hammer, MessageSquare, Send, Sparkles, ThumbsUp } from 'lucide-react';
+import { Hammer, Mail, MessageSquare, Send, Sparkles, ThumbsUp } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { Avatar } from '../components/Avatar';
@@ -154,6 +154,14 @@ export function IdeaDetail() {
               className="btn-ember flex items-center gap-1.5 px-4 py-2 text-xs"
             >
               <Hammer size={12} /> I built this
+            </button>
+          )}
+          {idea.author_username && user?.username !== idea.author_username && isLoggedIn() && (
+            <button
+              onClick={() => navigate(`/messages?to=${idea.author_username}`)}
+              className="btn-ghost flex items-center gap-1.5 px-4 py-2 text-xs"
+            >
+              <Mail size={12} /> Message
             </button>
           )}
         </div>

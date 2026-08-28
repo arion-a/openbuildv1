@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ExternalLink, Pencil, Save, X, Star, Send, GitFork, ImagePlus, Loader2 } from 'lucide-react';
+import { ExternalLink, Pencil, Save, X, Star, Send, GitFork, ImagePlus, Loader2, Mail } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { Avatar } from '../components/Avatar';
@@ -345,6 +345,14 @@ export function ProjectDetail() {
               >
                 Source
               </a>
+            )}
+            {!isOwner && project.owner_username && isLoggedIn() && (
+              <button
+                onClick={() => navigate(`/messages?to=${project.owner_username}`)}
+                className="btn-ghost inline-flex items-center gap-2 px-4 py-2 text-sm"
+              >
+                <Mail size={14} /> Message
+              </button>
             )}
           </div>
 

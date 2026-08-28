@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowUpRight, Copy, Check, ExternalLink, MessageSquare, Star, Hammer, Lightbulb, Activity } from 'lucide-react';
+import { ArrowUpRight, Copy, Check, ExternalLink, Mail, MessageSquare, Star, Hammer, Lightbulb, Activity } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { Avatar } from '../components/Avatar';
@@ -48,12 +48,33 @@ interface MakerData {
   bolt_url: string | null;
   created_at: string;
   tools?: string[];
-  stats: { builds: number; ideas: number; stars_received: number; reviews_received: number };
+  is_self?: boolean;
+  following?: boolean;
+  follower_count?: number;
+  badges?: string[];
+  stats: {
+    builds: number;
+    ideas: number;
+    stars_received: number;
+    reviews_received: number;
+    avg_rating?: number;
+    rating_count?: number;
+  };
   top_build?: MakerBuild | null;
   builds: MakerBuild[];
   ideas: MakerIdea[];
   activity: ActivityItem[];
 }
+
+const BADGE_LABEL: Record<string, string> = {
+  first_build: 'Shipped a build',
+  first_idea: 'Posted an idea',
+  five_builds: '5+ builds',
+  five_stars: '5+ stars',
+  twentyfive_stars: '25+ stars',
+  reviewed_three: 'Well reviewed',
+  shipped_this_week: 'Shipping this week',
+};
 
 function WorkLink({ href, label }: { href: string; label: string }) {
   return (
@@ -110,6 +131,8 @@ export function Maker() {
   const [error, setError] = useState('');
   const [tab, setTab] = useState<Tab>('builds');
   const [copied, setCopied] = useState(false);
+  const [following, setFollowing] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
 
   useEffect(() => {
     if (!handle) return;
@@ -117,10 +140,30 @@ export function Maker() {
     setError('');
     setTab('builds');
     api.getMaker(handle)
-      .then(setMaker)
+      .then((m) => {
+        setMaker(m);
+        setFollowing(!!m.following);
+      })
       .catch((err) => setError(err.message || 'Not found'))
       .finally(() => setLoading(false));
   }, [handle]);
+
+  const toggleFollow = async () => {
+    if (!isLoggedIn()) {
+      navigate(`/auth?next=${encodeURIComponent(`/u/${handle}`)}`);
+      return;
+    }
+    if (!handle) return;
+    setFollowBusy(true);
+    try {
+      const res = await api.toggleFollow(handle);
+      setFollowing(res.following);
+    } catch {
+      /* ignore */
+    } finally {
+      setFollowBusy(false);
+    }
+  };
 
   const shareProfile = async () => {
     const url = window.location.href;
@@ -189,12 +232,16 @@ export function Maker() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
         {[
           { n: stats.builds, l: 'Builds' },
           { n: stats.ideas, l: 'Ideas' },
           { n: stats.stars_received, l: 'Stars' },
-          { n: stats.reviews_received, l: 'Reviews' },
+          {
+            n: (stats.rating_count ?? 0) > 0 ? Number(stats.avg_rating).toFixed(1) : '—',
+            l: (stats.rating_count ?? 0) > 0 ? `Rating · ${stats.rating_count}` : 'Rating',
+          },
+          { n: maker.follower_count ?? 0, l: 'Followers' },
         ].map((s) => (
           <div key={s.l} className="ob-panel px-4 py-3 text-center">
             <p className="font-display text-2xl">{s.n}</p>
@@ -203,8 +250,16 @@ export function Maker() {
         ))}
       </div>
 
+      {maker.badges && maker.badges.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-6">
+          {maker.badges.map((b) => (
+            <span key={b} className="signal-pill">{BADGE_LABEL[b] || b}</span>
+          ))}
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-2 mb-8">
-        {isSelf && (
+        {isSelf ? (
           <>
             <button onClick={() => navigate('/publish?kind=build')} className="btn-ember px-4 py-2 text-sm">
               Post a build
@@ -215,6 +270,26 @@ export function Maker() {
             <Link to="/settings" className="btn-ghost px-4 py-2 text-sm">
               Edit profile
             </Link>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={toggleFollow}
+              disabled={followBusy}
+              className={`${following ? 'btn-ghost' : 'btn-ember'} px-4 py-2 text-sm disabled:opacity-50`}
+            >
+              {following ? 'Following' : 'Follow'}
+            </button>
+            <button
+              onClick={() =>
+                isLoggedIn()
+                  ? navigate(`/messages?to=${maker.username}`)
+                  : navigate(`/auth?next=${encodeURIComponent(`/messages?to=${maker.username}`)}`)
+              }
+              className="btn-ghost inline-flex items-center gap-2 px-4 py-2 text-sm"
+            >
+              <Mail size={14} /> Message
+            </button>
           </>
         )}
         <button onClick={shareProfile} className="btn-ghost inline-flex items-center gap-2 px-4 py-2 text-sm">

@@ -1,5 +1,24 @@
 import { FastifyInstance } from 'fastify';
 import { pool } from '../db/pool.js';
+import { firebaseAdmin } from '../config/firebase.js';
+
+async function viewerId(app: FastifyInstance, request: any): Promise<string | null> {
+  const h = request.headers.authorization;
+  if (!h?.startsWith('Bearer ')) return null;
+  const token = h.slice(7);
+  try {
+    return (app.jwt.verify(token) as any).id || null;
+  } catch {
+    /* not a local jwt */
+  }
+  try {
+    const d = await firebaseAdmin.auth().verifyIdToken(token);
+    const r = await pool.query('SELECT id FROM users WHERE firebase_uid = $1', [d.uid]);
+    return r.rows[0]?.id || null;
+  } catch {
+    return null;
+  }
+}
 
 export function publicMakerFields(u: any) {
   return {
@@ -95,8 +114,9 @@ export async function makerRoutes(app: FastifyInstance) {
     }
     const maker = userRes.rows[0];
     const makerId = maker.id;
+    const viewer = await viewerId(app, request);
 
-    const [projectsRes, ideasRes, starRes, reviewRes, activityRes, toolsRes] = await Promise.all([
+    const [projectsRes, ideasRes, starRes, reviewRes, activityRes, toolsRes, ratingRes, followRes] = await Promise.all([
       pool.query(
         `SELECT p.id, p.title, p.tagline, p.domain, p.tools_used, p.status, p.live_url, p.upvotes, p.created_at,
                 (SELECT COUNT(*)::int FROM project_reviews r WHERE r.project_id = p.id) AS review_count
@@ -167,6 +187,20 @@ export async function makerRoutes(app: FastifyInstance) {
          LIMIT 12`,
         [makerId]
       ),
+      pool.query(
+        `SELECT COALESCE(AVG(r.rating), 0)::float AS avg, COUNT(*)::int AS n
+         FROM project_reviews r JOIN projects p ON p.id = r.project_id
+         WHERE p.owner_id = $1`,
+        [makerId]
+      ),
+      pool.query(
+        `SELECT
+           (SELECT COUNT(*)::int FROM follows WHERE followee_id = $1) AS followers,
+           ($2::uuid IS NOT NULL AND EXISTS (
+             SELECT 1 FROM follows WHERE follower_id = $2 AND followee_id = $1
+           )) AS following`,
+        [makerId, viewer]
+      ),
     ]);
 
     const builds = projectsRes.rows;
@@ -177,14 +211,36 @@ export async function makerRoutes(app: FastifyInstance) {
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     })[0] || null;
 
+    const stars = num(starRes.rows[0]?.stars_received);
+    const reviews = num(reviewRes.rows[0]?.reviews_received);
+    const ratingCount = num(ratingRes.rows[0]?.n);
+    const shippedThisWeek = builds.filter(
+      (b: any) => Date.now() - new Date(b.created_at).getTime() < 7 * 864e5
+    ).length;
+
+    const badges: string[] = [];
+    if (builds.length >= 1) badges.push('first_build');
+    if (ideasRes.rows.length >= 1) badges.push('first_idea');
+    if (builds.length >= 5) badges.push('five_builds');
+    if (stars >= 5) badges.push('five_stars');
+    if (stars >= 25) badges.push('twentyfive_stars');
+    if (reviews >= 3) badges.push('reviewed_three');
+    if (shippedThisWeek >= 2) badges.push('shipped_this_week');
+
     return {
       ...publicMakerFields(maker),
       tools: toolsRes.rows.map((r: any) => r.tool).filter(Boolean),
+      is_self: !!viewer && viewer === makerId,
+      following: !!followRes.rows[0]?.following,
+      follower_count: num(followRes.rows[0]?.followers),
+      badges,
       stats: {
         builds: builds.length,
         ideas: ideasRes.rows.length,
-        stars_received: num(starRes.rows[0]?.stars_received),
-        reviews_received: num(reviewRes.rows[0]?.reviews_received),
+        stars_received: stars,
+        reviews_received: reviews,
+        avg_rating: Number(ratingRes.rows[0]?.avg || 0),
+        rating_count: ratingCount,
       },
       top_build: topBuild,
       builds,
