@@ -11,11 +11,15 @@ interface Project {
   id: string;
   title: string;
   tagline: string;
+  domain?: string | null;
+  media?: string[] | null;
   owner_name: string;
   owner_username?: string;
   live_url?: string | null;
   upvotes?: number;
   upvoted?: boolean;
+  review_count?: number;
+  avg_rating?: number;
   owner_avatar_url?: string;
 }
 
@@ -110,16 +114,33 @@ export function BuildLive() {
             {projects.map((project) => (
               <article key={project.id} className="ob-card overflow-hidden">
                 <Link to={`/buildlive/${project.id}`} className="block">
-                  <div
-                    className="h-32 relative"
-                    style={{ background: swatchGradient(project.title) }}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                  </div>
+                  {project.media && project.media[0] ? (
+                    <div className="h-32 relative">
+                      <img src={project.media[0]} alt="" className="h-32 w-full object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                    </div>
+                  ) : (
+                    <div
+                      className="h-32 relative"
+                      style={{ background: swatchGradient(project.title) }}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                    </div>
+                  )}
                   <div className="p-5 pb-3">
-                    <h2 className="font-display text-2xl leading-tight">{project.title}</h2>
+                    <div className="flex items-start justify-between gap-2">
+                      <h2 className="font-display text-2xl leading-tight">{project.title}</h2>
+                      {(project.review_count ?? 0) > 0 && (
+                        <span className="shrink-0 text-xs font-semibold text-[var(--gold)] mt-1">
+                          ★ {Number(project.avg_rating).toFixed(1)}
+                        </span>
+                      )}
+                    </div>
                     {project.tagline && (
                       <p className="text-sm text-[var(--muted)] mt-2 line-clamp-2">{project.tagline}</p>
+                    )}
+                    {project.domain && (
+                      <span className="ob-chip mt-3">{project.domain}</span>
                     )}
                   </div>
                 </Link>

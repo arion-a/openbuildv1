@@ -9,6 +9,8 @@ interface Idea {
   id: string;
   title: string;
   body: string;
+  domain?: string | null;
+  media?: string[] | null;
   upvotes: number;
   upvoted?: boolean;
   thread_count: string | number;
@@ -98,10 +100,18 @@ export function IdeaStream() {
                   {idea.author || idea.author_username}
                 </MakerLink>
                 <span className="text-xs text-[var(--muted)]">{timeAgo(idea.created_at)}</span>
+                {idea.domain && <span className="ob-chip">{idea.domain}</span>}
               </div>
               <Link to={`/ideastream/${idea.id}`} className="block">
-                <h2 className="font-display text-2xl leading-tight hover:text-[var(--ember)] transition-colors">{idea.title}</h2>
-                {idea.body && <p className="text-sm text-[var(--muted)] mt-2 line-clamp-3">{idea.body}</p>}
+                <div className="flex gap-4">
+                  <div className="min-w-0 flex-1">
+                    <h2 className="font-display text-2xl leading-tight hover:text-[var(--ember)] transition-colors">{idea.title}</h2>
+                    {idea.body && <p className="text-sm text-[var(--muted)] mt-2 line-clamp-3">{idea.body}</p>}
+                  </div>
+                  {idea.media && idea.media[0] && (
+                    <img src={idea.media[0]} alt="" className="shrink-0 h-20 w-20 rounded-lg object-cover border border-[var(--line)]" />
+                  )}
+                </div>
               </Link>
               <div className="flex items-center gap-4 mt-4 text-xs font-semibold text-[var(--muted)]">
                 <button

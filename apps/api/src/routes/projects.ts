@@ -67,7 +67,9 @@ export async function projectRoutes(app: FastifyInstance) {
     const offset = Math.max(parseInt(rawOffset) || 0, 0);
     let query = `
       SELECT p.*, COALESCE(NULLIF(TRIM(u.display_name), ''), u.username) as owner_name, u.username as owner_username, u.avatar_url as owner_avatar_url,
-        (SELECT COUNT(*) FROM project_contributors WHERE project_id = p.id) as contributor_count
+        (SELECT COUNT(*) FROM project_contributors WHERE project_id = p.id) as contributor_count,
+        (SELECT COUNT(*) FROM project_reviews WHERE project_id = p.id)::int as review_count,
+        (SELECT COALESCE(AVG(rating), 0) FROM project_reviews WHERE project_id = p.id)::float as avg_rating
       FROM projects p
       JOIN users u ON p.owner_id = u.id
       WHERE 1=1
