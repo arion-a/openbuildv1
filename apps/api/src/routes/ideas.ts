@@ -80,6 +80,7 @@ export async function ideaRoutes(app: FastifyInstance) {
         kind: 'idea',
         title: body.title,
         body: body.body,
+        media: body.media,
         domain: body.domain,
       });
       return idea;

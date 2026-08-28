@@ -16,6 +16,8 @@ export type PublishInput = {
   kind: PublishKind;
   title?: string;
   body?: string;
+  description?: string | null;
+  media?: unknown;
   live_url?: string | null;
   how_to_replicate?: string | null;
   tools_used?: unknown;
@@ -73,12 +75,27 @@ function asOptionalUuid(raw: unknown): string | null {
   return raw;
 }
 
+/** Ordered list of image URLs. Accepts an array of strings or {url} objects. */
+export function sanitizeMedia(raw: unknown): string[] {
+  const list = Array.isArray(raw) ? raw : typeof raw === 'string' && raw.trim() ? [raw] : [];
+  const urls: string[] = [];
+  for (const item of list) {
+    const candidate = typeof item === 'string' ? item : (item as { url?: unknown })?.url;
+    const url = cleanHttpUrl(typeof candidate === 'string' ? candidate : null);
+    if (url && !urls.includes(url)) urls.push(url);
+    if (urls.length >= 12) break;
+  }
+  return urls;
+}
+
 function normalize(input: PublishInput, opts: { requireTitle: boolean; requireIdeaBody: boolean }) {
   const kind = asKind(input.kind);
   return {
     kind,
     title: asTitle(input.title, opts.requireTitle),
     body: asBody(input.body, opts.requireIdeaBody && kind === 'idea'),
+    description: asBody(input.description, false),
+    media: sanitizeMedia(input.media),
     live_url: cleanHttpUrl(input.live_url),
     how_to_replicate: typeof input.how_to_replicate === 'string' ? input.how_to_replicate.trim() || null : null,
     tools_used: asTools(input.tools_used),
@@ -103,9 +120,9 @@ async function insertProject(userId: string, data: ReturnType<typeof normalize>)
   }
 
   const res = await pool.query(
-    `INSERT INTO projects (owner_id, title, tagline, repo_name, domain, tools_used, potential_applications, live_url, how_to_replicate)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-    [userId, data.title, data.body, `${user.username}/${repoName}`, data.domain, data.tools_used, data.potential_applications, data.live_url, data.how_to_replicate]
+    `INSERT INTO projects (owner_id, title, tagline, description, media, repo_name, domain, tools_used, potential_applications, live_url, how_to_replicate)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+    [userId, data.title, data.body, data.description, JSON.stringify(data.media), `${user.username}/${repoName}`, data.domain, data.tools_used, data.potential_applications, data.live_url, data.how_to_replicate]
   );
 
   await pool.query(
@@ -125,9 +142,9 @@ async function insertProject(userId: string, data: ReturnType<typeof normalize>)
 
 async function insertIdea(userId: string, data: ReturnType<typeof normalize>) {
   const res = await pool.query(
-    `INSERT INTO ideas (author_id, title, body, domain, tags)
-     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-    [userId, data.title, data.body, data.domain, []]
+    `INSERT INTO ideas (author_id, title, body, domain, tags, media)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+    [userId, data.title, data.body, data.domain, [], JSON.stringify(data.media)]
   );
   const idea = res.rows[0];
   const u = await pool.query(
@@ -144,15 +161,18 @@ async function insertPublicationRow(userId: string, data: ReturnType<typeof norm
 }) {
   const res = await pool.query(
     `INSERT INTO publications (
-       author_id, kind, status, title, body, live_url, how_to_replicate, tools_used,
+       author_id, kind, status, title, body, description, media, domain, live_url, how_to_replicate, tools_used,
        source_idea_id, project_id, idea_id, published_at
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
     [
       userId,
       data.kind,
       extra.status,
       data.title,
       data.body,
+      data.description,
+      JSON.stringify(data.media),
+      data.domain,
       data.live_url,
       data.how_to_replicate,
       data.tools_used,
@@ -196,21 +216,23 @@ export async function updateDraft(userId: string, id: string, input: Partial<Pub
       kind: (input.kind as PublishKind) || existing.kind,
       title: input.title !== undefined ? input.title : existing.title,
       body: input.body !== undefined ? input.body : existing.body,
+      description: input.description !== undefined ? input.description : existing.description,
+      media: input.media !== undefined ? input.media : existing.media,
       live_url: input.live_url !== undefined ? input.live_url : existing.live_url,
       how_to_replicate: input.how_to_replicate !== undefined ? input.how_to_replicate : existing.how_to_replicate,
       tools_used: input.tools_used !== undefined ? input.tools_used : existing.tools_used,
       source_idea_id: input.source_idea_id !== undefined ? input.source_idea_id : existing.source_idea_id,
-      domain: existing.domain,
+      domain: input.domain !== undefined ? input.domain : existing.domain,
       potential_applications: existing.potential_applications,
     },
     { requireTitle: false, requireIdeaBody: false }
   );
   const res = await pool.query(
     `UPDATE publications SET
-       kind = $1, title = $2, body = $3, live_url = $4, how_to_replicate = $5,
-       tools_used = $6, source_idea_id = $7, updated_at = NOW()
-     WHERE id = $8 AND author_id = $9 AND status = 'draft' RETURNING *`,
-    [data.kind, data.title, data.body, data.live_url, data.how_to_replicate, data.tools_used, data.source_idea_id, id, userId]
+       kind = $1, title = $2, body = $3, description = $4, media = $5, domain = $6, live_url = $7, how_to_replicate = $8,
+       tools_used = $9, source_idea_id = $10, updated_at = NOW()
+     WHERE id = $11 AND author_id = $12 AND status = 'draft' RETURNING *`,
+    [data.kind, data.title, data.body, data.description, JSON.stringify(data.media), data.domain, data.live_url, data.how_to_replicate, data.tools_used, data.source_idea_id, id, userId]
   );
   if (!res.rows[0]) throw new PublishError(409, 'Already published');
   return res.rows[0];

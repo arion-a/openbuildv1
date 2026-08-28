@@ -106,8 +106,10 @@ export async function ensureShowcaseColumns() {
   await pool.query(`
     ALTER TABLE projects ADD COLUMN IF NOT EXISTS description TEXT;
     ALTER TABLE projects ADD COLUMN IF NOT EXISTS media JSONB DEFAULT '[]'::jsonb;
+    ALTER TABLE projects ADD COLUMN IF NOT EXISTS stage VARCHAR(20);
     ALTER TABLE ideas ADD COLUMN IF NOT EXISTS media JSONB DEFAULT '[]'::jsonb;
     ALTER TABLE publications ADD COLUMN IF NOT EXISTS description TEXT;
     ALTER TABLE publications ADD COLUMN IF NOT EXISTS media JSONB DEFAULT '[]'::jsonb;
+    ALTER TABLE publications ADD COLUMN IF NOT EXISTS domain VARCHAR(100);
   `);
 }

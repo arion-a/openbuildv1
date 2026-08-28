@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { CheckCircle, Loader2, Upload } from 'lucide-react';
+import { CheckCircle, ImagePlus, Loader2, Upload, X } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
+import { imageUploadEnabled, uploadImages } from '../lib/uploadImage';
 
 type Kind = 'build' | 'idea';
 
@@ -12,6 +13,9 @@ interface Publication {
   status: 'draft' | 'published';
   title: string;
   body: string | null;
+  description: string | null;
+  media: string[] | null;
+  domain: string | null;
   live_url: string | null;
   how_to_replicate: string | null;
   tools_used: string[] | null;
@@ -34,10 +38,16 @@ export function Publish() {
   const [pubId, setPubId] = useState<string | null>(id || null);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
+  const [description, setDescription] = useState('');
+  const [media, setMedia] = useState<string[]>([]);
+  const [mediaBusy, setMediaBusy] = useState(false);
+  const [domain, setDomain] = useState('');
   const [liveUrl, setLiveUrl] = useState('');
   const [howTo, setHowTo] = useState('');
   const [tools, setTools] = useState('');
+  const [applications, setApplications] = useState('');
   const [sourceIdeaId, setSourceIdeaId] = useState(sourceIdea || '');
+  const mediaInputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<'draft' | 'published'>('draft');
   const [projectId, setProjectId] = useState<string | null>(null);
   const [ideaId, setIdeaId] = useState<string | null>(null);
@@ -68,6 +78,9 @@ export function Publish() {
         setKind(p.kind);
         setTitle(p.title || '');
         setBody(p.body || '');
+        setDescription(p.description || '');
+        setMedia(Array.isArray(p.media) ? p.media : []);
+        setDomain(p.domain || '');
         setLiveUrl(p.live_url || '');
         setHowTo(p.how_to_replicate || '');
         setTools((p.tools_used || []).join(', '));
@@ -84,11 +97,32 @@ export function Publish() {
     kind: kind as Kind,
     title: title.trim(),
     body: body.trim(),
+    description: kind === 'build' ? description.trim() || null : null,
+    media,
+    domain: domain.trim() || null,
     live_url: liveUrl.trim() || null,
-    how_to_replicate: howTo.trim() || null,
+    how_to_replicate: kind === 'build' ? howTo.trim() || null : null,
     tools_used: tools.split(',').map((t) => t.trim()).filter(Boolean),
+    potential_applications:
+      kind === 'build' ? applications.split(',').map((t) => t.trim()).filter(Boolean) : [],
     source_idea_id: sourceIdeaId || null,
   });
+
+  const addScreenshots = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (!files.length) return;
+    setMediaBusy(true);
+    setError('');
+    try {
+      const uploaded = await uploadImages(files.slice(0, 12 - media.length));
+      setMedia((prev) => [...prev, ...uploaded.map((u) => u.url)].slice(0, 12));
+    } catch (err: any) {
+      setError(err.message || 'Could not add those images.');
+    } finally {
+      setMediaBusy(false);
+    }
+  };
 
   const saveDraft = async () => {
     if (!kind) return;
@@ -192,35 +226,140 @@ export function Publish() {
           className="ob-panel p-6 space-y-4"
         >
           <p className="text-sm text-[var(--muted)]">{kind === 'build' ? 'Publish a build' : 'Publish an idea'}</p>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder={kind === 'build' ? 'What you built' : 'What’s the idea?'}
-            maxLength={300}
-            className="ob-input"
-          />
-          <textarea
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder={kind === 'build' ? 'What it does, who it’s for' : 'Who is this for, and how would it work?'}
-            className="ob-input h-28 resize-none"
-          />
+
+          <label className="block space-y-1">
+            <span className="text-xs text-[var(--muted)]">{kind === 'build' ? 'What you built' : 'The idea, in a line'}</span>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder={kind === 'build' ? 'e.g. Mealplan' : 'e.g. A CRM that’s just a really good text file'}
+              maxLength={300}
+              className="ob-input"
+            />
+          </label>
+
+          <label className="block space-y-1">
+            <span className="text-xs text-[var(--muted)]">
+              {kind === 'build' ? 'One line — what it does and who it’s for' : 'Who is this for, and how would it work?'}
+            </span>
+            <textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              placeholder={kind === 'build' ? 'Weekly meals from what’s in your fridge — snap a photo, get a plan.' : 'Plain text. What problem it solves, roughly how.'}
+              className={kind === 'build' ? 'ob-input h-16 resize-none' : 'ob-input h-28 resize-none'}
+            />
+          </label>
+
+          {kind === 'build' && (
+            <label className="block space-y-1">
+              <span className="text-xs text-[var(--muted)]">The story — what it does, why you made it, how it went. Light Markdown is fine.</span>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="I kept rebuilding the same meal spreadsheet, so…"
+                className="ob-input h-40 resize-none"
+              />
+            </label>
+          )}
+
+          {imageUploadEnabled() && (
+            <div className="space-y-2">
+              <span className="text-xs text-[var(--muted)]">
+                {kind === 'build' ? 'Screenshots' : 'Sketches or references (optional)'} — first one is the cover
+              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                {media.map((url, i) => (
+                  <div key={url} className="relative">
+                    <img
+                      src={url}
+                      alt={`screenshot ${i + 1}`}
+                      className="h-16 w-16 rounded-lg object-cover border border-[var(--line)]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setMedia(media.filter((_, j) => j !== i))}
+                      className="absolute -top-1.5 -right-1.5 bg-[var(--bg)] border border-[var(--line)] rounded-full p-0.5 text-[var(--muted)] hover:text-[var(--cream)]"
+                      aria-label="Remove image"
+                    >
+                      <X size={11} />
+                    </button>
+                  </div>
+                ))}
+                {media.length < 12 && (
+                  <button
+                    type="button"
+                    onClick={() => mediaInputRef.current?.click()}
+                    disabled={mediaBusy}
+                    className="h-16 w-16 rounded-lg border border-dashed border-[var(--line)] flex items-center justify-center text-[var(--muted)] hover:text-[var(--cream)] hover:border-[var(--ember)]/50 disabled:opacity-50"
+                    aria-label="Add screenshots"
+                  >
+                    {mediaBusy ? <Loader2 size={16} className="animate-spin" /> : <ImagePlus size={16} />}
+                  </button>
+                )}
+              </div>
+              <input
+                ref={mediaInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={addScreenshots}
+              />
+            </div>
+          )}
+
           {kind === 'build' && (
             <>
-              <input
-                value={liveUrl}
-                onChange={(e) => setLiveUrl(e.target.value)}
-                placeholder="https://"
-                className="ob-input"
-              />
-              <input
-                value={tools}
-                onChange={(e) => setTools(e.target.value)}
-                placeholder="Cursor, Lovable, …"
-                className="ob-input"
-              />
+              <label className="block space-y-1">
+                <span className="text-xs text-[var(--muted)]">Where people can try it</span>
+                <input
+                  value={liveUrl}
+                  onChange={(e) => setLiveUrl(e.target.value)}
+                  placeholder="https://"
+                  className="ob-input"
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-xs text-[var(--muted)]">Built with</span>
+                <input
+                  value={tools}
+                  onChange={(e) => setTools(e.target.value)}
+                  placeholder="Cursor, Lovable, Supabase, …"
+                  className="ob-input"
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-xs text-[var(--muted)]">How to replicate (optional) — the prompts or steps that got you here</span>
+                <textarea
+                  value={howTo}
+                  onChange={(e) => setHowTo(e.target.value)}
+                  placeholder="Started from a Lovable template, then…"
+                  className="ob-input h-24 resize-none"
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-xs text-[var(--muted)]">Also useful for (optional) — comma separated</span>
+                <input
+                  value={applications}
+                  onChange={(e) => setApplications(e.target.value)}
+                  placeholder="meal prep, grocery budgeting"
+                  className="ob-input"
+                />
+              </label>
             </>
           )}
+
+          <label className="block space-y-1">
+            <span className="text-xs text-[var(--muted)]">Domain{kind === 'idea' ? ' (optional)' : ''}</span>
+            <input
+              value={domain}
+              onChange={(e) => setDomain(e.target.value)}
+              placeholder="productivity, devtools, finance, …"
+              maxLength={100}
+              className="ob-input"
+            />
+          </label>
+
           {error && <p className="text-red-400 text-sm">{error}</p>}
           <div className="flex flex-wrap justify-end gap-3">
             <button type="button" onClick={() => { if (!id) setKind(null); }} className="px-4 py-2 text-[var(--muted)] hover:text-[var(--cream)] text-sm">

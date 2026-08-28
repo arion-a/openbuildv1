@@ -3,7 +3,7 @@ import { pool } from '../db/pool.js';
 import { gitService } from '../services/git.service.js';
 import { decrypt, giteaWebBase } from '../config/env.js';
 import { firebaseAdmin } from '../config/firebase.js';
-import { cleanHttpUrl, createLive, PublishError } from '../services/publish.service.js';
+import { cleanHttpUrl, createLive, sanitizeMedia, PublishError } from '../services/publish.service.js';
 import { readFileSync, createWriteStream, mkdirSync, readdirSync, statSync } from 'fs';
 import { mkdtemp, rm } from 'fs/promises';
 import { tmpdir } from 'os';
@@ -159,6 +159,8 @@ export async function projectRoutes(app: FastifyInstance) {
         kind: 'build',
         title: body.title,
         body: body.tagline,
+        description: body.description,
+        media: body.media,
         live_url: body.live_url,
         how_to_replicate: body.how_to_replicate,
         tools_used: body.tools_used,
@@ -235,25 +237,29 @@ export async function projectRoutes(app: FastifyInstance) {
   app.put('/:id', { preHandler: [(app as any).authenticate] }, async (request, reply) => {
     const { id } = request.params as any;
     const { id: userId } = (request as any).user;
-    const { title, tagline, domain, tools_used, potential_applications, status, stage, live_url, how_to_replicate } = request.body as any;
+    const { title, tagline, description, media, domain, tools_used, potential_applications, status, stage, live_url, how_to_replicate } = request.body as any;
 
     const res = await pool.query(
       `UPDATE projects SET
         title = COALESCE($2, title),
         tagline = COALESCE($3, tagline),
-        domain = COALESCE($4, domain),
-        tools_used = COALESCE($5, tools_used),
-        potential_applications = COALESCE($6, potential_applications),
-        status = COALESCE($7, status),
-        stage = COALESCE($8, stage),
-        live_url = COALESCE($9, live_url),
-        how_to_replicate = COALESCE($10, how_to_replicate)
-       WHERE id = $1 AND owner_id = $11
+        description = COALESCE($4, description),
+        media = COALESCE($5, media),
+        domain = COALESCE($6, domain),
+        tools_used = COALESCE($7, tools_used),
+        potential_applications = COALESCE($8, potential_applications),
+        status = COALESCE($9, status),
+        stage = COALESCE($10, stage),
+        live_url = COALESCE($11, live_url),
+        how_to_replicate = COALESCE($12, how_to_replicate)
+       WHERE id = $1 AND owner_id = $13
        RETURNING *`,
       [
         id,
         title || null,
         tagline || null,
+        description !== undefined ? (description || null) : null,
+        media !== undefined ? JSON.stringify(sanitizeMedia(media)) : null,
         domain || null,
         tools_used || null,
         potential_applications || null,
