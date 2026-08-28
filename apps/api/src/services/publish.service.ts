@@ -1,6 +1,6 @@
 import { pool } from '../db/pool.js';
 import { gitService } from './git.service.js';
-import { decrypt } from '../config/env.js';
+import { config, decrypt } from '../config/env.js';
 
 export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -94,7 +94,7 @@ async function insertProject(userId: string, data: ReturnType<typeof normalize>)
   if (!user) throw new PublishError(401, 'User not found');
 
   const repoName = (data.title || 'build').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'build';
-  if (user.gitea_token_encrypted) {
+  if (config.gitea.autoProvision && user.gitea_token_encrypted) {
     try {
       await gitService.createUserRepo(decrypt(user.gitea_token_encrypted), repoName, data.body || data.title);
     } catch (err: any) {

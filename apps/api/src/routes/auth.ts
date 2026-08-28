@@ -4,7 +4,7 @@ import { promisify } from 'util';
 import { pool } from '../db/pool.js';
 import { gitService } from '../services/git.service.js';
 import { firebaseAdmin } from '../config/firebase.js';
-import { encrypt, decrypt, giteaWebBase } from '../config/env.js';
+import { config, encrypt, decrypt, giteaWebBase } from '../config/env.js';
 
 const scryptAsync = promisify(scrypt);
 
@@ -50,6 +50,11 @@ function cleanHttpUrl(raw?: string | null): string | null {
 async function provisionGitea(username: string, email: string, password: string) {
   let giteaId = null;
   let giteaToken = null;
+  if (!config.gitea.autoProvision) {
+    // Lazy Gitea: no repo hosting wired up (or explicitly disabled). Signup and
+    // publish work without it; a repo can be created later when the user opts in.
+    return { giteaId, giteaToken };
+  }
   try {
     const giteaUser = await gitService.createUser(username, email, password);
     const tokenName = `openbuild_${Date.now()}`;
