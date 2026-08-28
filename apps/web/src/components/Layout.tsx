@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LogOut, Settings, UserRound, Shield, Mail, Search } from 'lucide-react';
+import { LogOut, Settings, UserRound, Shield, Mail, Search, Bell } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { api } from '../lib/api';
 import { Avatar } from './Avatar';
 
 function AccountMenu() {
@@ -108,6 +109,42 @@ function HeaderSearch() {
   );
 }
 
+function NotifBell() {
+  const { isLoggedIn } = useAuth();
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    if (!isLoggedIn()) return;
+    let live = true;
+    const tick = async () => {
+      try {
+        const [n, m] = await Promise.all([api.unreadNotifications(), api.unreadMessages()]);
+        if (live) setCount((n?.count || 0) + (m?.count || 0));
+      } catch {
+        /* offline is fine */
+      }
+    };
+    tick();
+    const id = setInterval(tick, 45000);
+    return () => {
+      live = false;
+      clearInterval(id);
+    };
+  }, []);
+
+  if (!isLoggedIn()) return null;
+  return (
+    <Link to="/notifications" className="relative text-[var(--muted)] hover:text-[var(--cream)]" aria-label="Activity">
+      <Bell size={18} />
+      {count > 0 && (
+        <span className="absolute -top-1.5 -right-1.5 min-w-[15px] h-[15px] px-1 text-[9px] font-bold bg-[var(--ember)] text-white rounded-full flex items-center justify-center">
+          {count > 9 ? '9+' : count}
+        </span>
+      )}
+    </Link>
+  );
+}
+
 export function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -152,6 +189,7 @@ export function Layout() {
         <button onClick={goPublish} className="btn-ember px-3 md:px-4 py-1.5 text-xs md:text-sm">
           Publish
         </button>
+        <NotifBell />
         <AccountMenu />
       </header>
       <main className="flex-1">

@@ -17,6 +17,7 @@ import { Publish } from './pages/Publish';
 import { Landing } from './pages/Landing';
 import { Search } from './pages/Search';
 import { Discover } from './pages/Discover';
+import { Notifications } from './pages/Notifications';
 import { useAuth } from './hooks/useAuth';
 
 function Home() {
@@ -56,6 +57,7 @@ export default function App() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/messages" element={<Messages />} />
+          <Route path="/notifications" element={<Notifications />} />
         </Route>
       </Routes>
     </BrowserRouter>

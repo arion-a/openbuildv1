@@ -135,6 +135,22 @@ export const api = {
   search: (q: string, type: 'all' | 'builds' | 'ideas' | 'makers' = 'all') =>
     request(`/search?q=${encodeURIComponent(q)}${type !== 'all' ? `&type=${type}` : ''}`),
 
+  // Messages
+  getMessageThreads: () => request('/messages'),
+  getConversation: (username: string) => request(`/messages/${encodeURIComponent(username)}`),
+  sendMessage: (username: string, body: string) =>
+    request(`/messages/${encodeURIComponent(username)}`, { method: 'POST', body: JSON.stringify({ body }) }),
+  unreadMessages: () => request('/messages/unread-count'),
+
+  // Notifications
+  getNotifications: () => request('/notifications'),
+  unreadNotifications: () => request('/notifications/unread-count'),
+  markNotificationsRead: () => request('/notifications/read', { method: 'POST', body: JSON.stringify({}) }),
+
+  // Follows
+  toggleFollow: (username: string) => request(`/follows/${encodeURIComponent(username)}`, { method: 'POST' }),
+  followingFeed: (kind?: 'builds' | 'ideas') => request(`/follows/feed${kind ? `?kind=${kind}` : ''}`),
+
   // Trending
   getTrending: () => request('/trending'),
   getTrendingBuilds: (limit = 10) => request(`/trending/builds?limit=${limit}`),
