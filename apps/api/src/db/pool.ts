@@ -100,3 +100,14 @@ export async function ensureWaitlistTable() {
     );
   `);
 }
+
+/** Showcase: long description + ordered media (image URLs) for builds and ideas. */
+export async function ensureShowcaseColumns() {
+  await pool.query(`
+    ALTER TABLE projects ADD COLUMN IF NOT EXISTS description TEXT;
+    ALTER TABLE projects ADD COLUMN IF NOT EXISTS media JSONB DEFAULT '[]'::jsonb;
+    ALTER TABLE ideas ADD COLUMN IF NOT EXISTS media JSONB DEFAULT '[]'::jsonb;
+    ALTER TABLE publications ADD COLUMN IF NOT EXISTS description TEXT;
+    ALTER TABLE publications ADD COLUMN IF NOT EXISTS media JSONB DEFAULT '[]'::jsonb;
+  `);
+}

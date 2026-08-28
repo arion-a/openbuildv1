@@ -20,7 +20,7 @@ import websocket from '@fastify/websocket';
 import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
 import { firebaseAdmin } from './config/firebase.js';
-import { pool, ensureMakerColumns, ensureBuildColumns, ensureDiscussionColumns, ensurePublishTables, ensureReviewTables, ensureWaitlistTable } from './db/pool.js';
+import { pool, ensureMakerColumns, ensureBuildColumns, ensureDiscussionColumns, ensurePublishTables, ensureReviewTables, ensureWaitlistTable, ensureShowcaseColumns } from './db/pool.js';
 import { makerRoutes } from './routes/makers.js';
 import { publicationRoutes } from './routes/publications.js';
 import { waitlistRoutes } from './routes/waitlist.js';
@@ -97,6 +97,9 @@ await ensureReviewTables().catch((err) => {
 });
 await ensureWaitlistTable().catch((err) => {
   app.log.warn({ err }, 'ensureWaitlistTable failed');
+});
+await ensureShowcaseColumns().catch((err) => {
+  app.log.warn({ err }, 'ensureShowcaseColumns failed');
 });
 
 await app.register(authRoutes, { prefix: '/auth' });
