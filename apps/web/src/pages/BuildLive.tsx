@@ -8,7 +8,7 @@ import { MakerLink } from '../components/MakerLink';
 import { FilterBar } from '../components/FilterBar';
 import { swatchGradient } from '../lib/swatch';
 
-const SORTS = [
+const BASE_SORTS = [
   { id: 'new', label: 'Newest' },
   { id: 'trending', label: 'Popular' },
   { id: 'top', label: 'Top rated' },
@@ -44,6 +44,7 @@ export function BuildLive() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const ideaId = searchParams.get('idea');
+  const sorts = isLoggedIn() ? [...BASE_SORTS, { id: 'following', label: 'Following' }] : BASE_SORTS;
 
   const domains = useMemo(
     () => [...new Set(facets.map((p) => p.domain).filter(Boolean) as string[])].sort(),
@@ -76,13 +77,18 @@ export function BuildLive() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    const qs = new URLSearchParams();
-    if (sort !== 'new') qs.set('sort', sort);
-    if (domain) qs.set('domain', domain);
-    if (tool) qs.set('tool', tool);
-    api
-      .getProjects(qs.toString())
-      .then((rows) => {
+    const fetcher =
+      sort === 'following'
+        ? api.followingFeed('builds').then((r: any) => r.builds)
+        : (() => {
+            const qs = new URLSearchParams();
+            if (sort !== 'new') qs.set('sort', sort);
+            if (domain) qs.set('domain', domain);
+            if (tool) qs.set('tool', tool);
+            return api.getProjects(qs.toString());
+          })();
+    fetcher
+      .then((rows: Project[]) => {
         if (cancelled) return;
         setProjects(rows);
         setLoadError('');
@@ -138,7 +144,7 @@ export function BuildLive() {
       <FilterBar
         sort={sort}
         onSort={setSort}
-        sorts={SORTS}
+        sorts={sorts}
         domain={domain}
         onDomain={setDomain}
         domains={domains}

@@ -6,7 +6,7 @@ import { Avatar } from '../components/Avatar';
 import { MakerLink } from '../components/MakerLink';
 import { FilterBar } from '../components/FilterBar';
 
-const SORTS = [
+const BASE_SORTS = [
   { id: 'new', label: 'Newest' },
   { id: 'trending', label: 'Popular' },
   { id: 'top', label: 'Most voted' },
@@ -57,18 +57,23 @@ export function IdeaStream() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    const qs = new URLSearchParams();
-    if (sort !== 'new') qs.set('sort', sort);
-    if (domain) qs.set('domain', domain);
-    api
-      .getIdeas(qs.toString())
-      .then((rows) => {
+    const fetcher =
+      sort === 'following'
+        ? api.followingFeed('ideas').then((r: any) => r.ideas)
+        : (() => {
+            const qs = new URLSearchParams();
+            if (sort !== 'new') qs.set('sort', sort);
+            if (domain) qs.set('domain', domain);
+            return api.getIdeas(qs.toString());
+          })();
+    fetcher
+      .then((rows: Idea[]) => {
         if (!cancelled) {
           setIdeas(rows);
           setLoadError('');
         }
       })
-      .catch((err) => {
+      .catch((err: any) => {
         if (!cancelled) setLoadError(err.message || 'Could not load ideas');
       })
       .finally(() => {
@@ -117,7 +122,14 @@ export function IdeaStream() {
         <span className="text-[var(--muted)]">What’s the idea?</span>
       </button>
 
-      <FilterBar sort={sort} onSort={setSort} sorts={SORTS} domain={domain} onDomain={setDomain} domains={domains} />
+      <FilterBar
+        sort={sort}
+        onSort={setSort}
+        sorts={isLoggedIn() ? [...BASE_SORTS, { id: 'following', label: 'Following' }] : BASE_SORTS}
+        domain={domain}
+        onDomain={setDomain}
+        domains={domains}
+      />
 
       {loading ? (
         <p className="text-[var(--muted)]">Loading…</p>
