@@ -13,6 +13,12 @@ interface User {
   email: string;
   avatar_url?: string;
   bio?: string;
+  github_username?: string | null;
+  github_url?: string | null;
+  lovable_url?: string | null;
+  replit_url?: string | null;
+  bolt_url?: string | null;
+  created_at?: string;
 }
 
 function readStoredUser(): User | null {
@@ -89,6 +95,11 @@ if (auth) {
             email: data.user.email,
             avatar_url: data.user.avatar_url,
             bio: data.user.bio,
+            github_username: data.user.github_username,
+            github_url: data.user.github_url,
+            lovable_url: data.user.lovable_url,
+            replit_url: data.user.replit_url,
+            bolt_url: data.user.bolt_url,
           });
         }
       } catch {

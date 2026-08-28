@@ -5,8 +5,9 @@ const BASE = (typeof import.meta.env.VITE_API_URL === 'string' && import.meta.en
   : '/api';
 
 function waitForAuth(): Promise<{ getIdToken: () => Promise<string> } | null> {
-  if (!auth) return Promise.resolve(null);
-  if (auth.currentUser) return Promise.resolve(auth.currentUser);
+  const a = auth;
+  if (!a) return Promise.resolve(null);
+  if (a.currentUser) return Promise.resolve(a.currentUser);
   return new Promise((resolve) => {
     let settled = false;
     const finish = (user: { getIdToken: () => Promise<string> } | null) => {
@@ -16,8 +17,8 @@ function waitForAuth(): Promise<{ getIdToken: () => Promise<string> } | null> {
       unsub();
       resolve(user);
     };
-    const unsub = onAuthStateChanged(auth, (user) => finish(user));
-    const timer = setTimeout(() => finish(auth?.currentUser ?? null), 2000);
+    const unsub = onAuthStateChanged(a, (user) => finish(user));
+    const timer = setTimeout(() => finish(a.currentUser ?? null), 2000);
   });
 }
 
