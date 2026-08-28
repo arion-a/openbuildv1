@@ -131,6 +131,10 @@ export const api = {
 
   joinWaitlist: (email: string) => request('/waitlist', { method: 'POST', body: JSON.stringify({ email }) }),
 
+  // Search
+  search: (q: string, type: 'all' | 'builds' | 'ideas' | 'makers' = 'all') =>
+    request(`/search?q=${encodeURIComponent(q)}${type !== 'all' ? `&type=${type}` : ''}`),
+
   // Trending
   getTrending: () => request('/trending'),
   getDomains: () => request('/trending/domains'),

@@ -101,6 +101,31 @@ export async function ensureWaitlistTable() {
   `);
 }
 
+/** Full-text search: generated tsvector columns + GIN indexes on builds and ideas.
+ *  Only plain text columns go in the generated expression — array_to_string() is
+ *  STABLE, not IMMUTABLE, so tools/tags can't live here (they're covered by the
+ *  array filters instead). */
+export async function ensureSearchColumns() {
+  await pool.query(`
+    ALTER TABLE projects ADD COLUMN IF NOT EXISTS search_tsv tsvector
+      GENERATED ALWAYS AS (
+        setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
+        setweight(to_tsvector('english', coalesce(tagline, '')), 'B') ||
+        setweight(to_tsvector('english', coalesce(domain, '')), 'B') ||
+        setweight(to_tsvector('english', coalesce(description, '')), 'C')
+      ) STORED;
+    CREATE INDEX IF NOT EXISTS idx_projects_search ON projects USING GIN (search_tsv);
+
+    ALTER TABLE ideas ADD COLUMN IF NOT EXISTS search_tsv tsvector
+      GENERATED ALWAYS AS (
+        setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
+        setweight(to_tsvector('english', coalesce(domain, '')), 'B') ||
+        setweight(to_tsvector('english', coalesce(body, '')), 'C')
+      ) STORED;
+    CREATE INDEX IF NOT EXISTS idx_ideas_search ON ideas USING GIN (search_tsv);
+  `);
+}
+
 /** Showcase: long description + ordered media (image URLs) for builds and ideas. */
 export async function ensureShowcaseColumns() {
   await pool.query(`
