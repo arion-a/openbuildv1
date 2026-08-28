@@ -133,7 +133,10 @@ export function Layout() {
         <Link to="/buildlive" className="font-display text-lg md:text-xl leading-none shrink-0">
           Open<span className="text-[var(--ember)]">Build</span>
         </Link>
-        <nav className="flex items-center gap-3 md:gap-6 min-w-0">
+        <nav className="flex items-center gap-3 md:gap-5 min-w-0">
+          <Link to="/discover" className={tab('/discover')}>
+            Discover
+          </Link>
           <Link to="/buildlive" className={tab('/buildlive')}>
             Builds
           </Link>
