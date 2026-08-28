@@ -3,6 +3,7 @@ import { config } from '../config/env.js';
 const giteaFetch = async (path: string, options: RequestInit = {}) => {
   const url = `${config.gitea.url}/api/v1${path}`;
   const res = await fetch(url, {
+    signal: options.signal ?? AbortSignal.timeout(4000),
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -23,6 +24,7 @@ const giteaFetch = async (path: string, options: RequestInit = {}) => {
 const giteaFetchWithToken = async (path: string, token: string, options: RequestInit = {}) => {
   const url = `${config.gitea.url}/api/v1${path}`;
   const res = await fetch(url, {
+    signal: options.signal ?? AbortSignal.timeout(4000),
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -137,7 +139,7 @@ export const gitService = {
     });
   },
 
-  async createFile(token: string, owner: string, repo: string, path: string, content: string, message: string) {
+  async createFile(token: string, owner: string, repo: string, path: string, content: string | Buffer, message: string) {
     const url = `${config.gitea.url}/api/v1/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
     const res = await fetch(url, {
       method: 'POST',
@@ -146,7 +148,7 @@ export const gitService = {
         Authorization: `token ${token}`,
       },
       body: JSON.stringify({
-        content: Buffer.from(content).toString('base64'),
+        content: (Buffer.isBuffer(content) ? content : Buffer.from(content)).toString('base64'),
         message,
       }),
     });

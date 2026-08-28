@@ -42,4 +42,28 @@ export const trendingService = {
     );
     return res.rows;
   },
+
+  // Builds are few and reviews/stars are cheap to count, so trending is computed
+  // on read — score = stars*2 + reviews*4 + a recency bump.
+  async getTrendingBuilds(limit: number = 10) {
+    const res = await pool.query(
+      `SELECT p.id, p.title, p.tagline, p.domain, p.media,
+              COALESCE(NULLIF(TRIM(u.display_name), ''), u.username) AS owner_name,
+              u.username AS owner_username,
+              COALESCE(rc.n, 0)::int AS review_count,
+              (
+                p.upvotes * 2 + COALESCE(rc.n, 0) * 4 +
+                CASE WHEN p.created_at > NOW() - INTERVAL '3 days' THEN 12
+                     WHEN p.created_at > NOW() - INTERVAL '14 days' THEN 6
+                     ELSE 0 END
+              ) AS score
+       FROM projects p
+       JOIN users u ON u.id = p.owner_id
+       LEFT JOIN (SELECT project_id, COUNT(*) n FROM project_reviews GROUP BY project_id) rc ON rc.project_id = p.id
+       ORDER BY score DESC, p.created_at DESC
+       LIMIT $1`,
+      [limit]
+    );
+    return res.rows;
+  },
 };

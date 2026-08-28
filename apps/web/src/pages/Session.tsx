@@ -16,7 +16,7 @@ export function Session() {
   const [terminalUrl, setTerminalUrl] = useState('');
 
   useEffect(() => {
-    auth.currentUser?.getIdToken().then(t => setToken(t));
+    auth?.currentUser?.getIdToken().then(t => setToken(t));
   }, []);
 
   useEffect(() => {
@@ -106,9 +106,9 @@ export function Session() {
     return (
       <div className="h-[calc(100vh-64px)] flex items-center justify-center">
         <div className="text-center space-y-4">
-          <Loader2 size={32} className="animate-spin text-cyan-400 mx-auto" />
-          <p className="text-slate-400">Starting OpenCode session...</p>
-          <p className="text-slate-500 text-sm">Cloning repository and booting environment</p>
+          <Loader2 size={32} className="animate-spin text-[var(--ember)] mx-auto" />
+          <p className="text-[var(--muted)]">Starting OpenCode session...</p>
+          <p className="text-[var(--muted)] text-sm">Cloning repository and booting environment</p>
         </div>
       </div>
     );
@@ -119,7 +119,7 @@ export function Session() {
       <div className="h-[calc(100vh-64px)] flex items-center justify-center">
         <div className="text-center space-y-4">
           <p className="text-red-400">{error}</p>
-          <button onClick={() => navigate('/buildlive')} className="text-cyan-400 hover:text-cyan-300">
+          <button onClick={() => navigate('/buildlive')} className="text-[var(--muted)] hover:text-[var(--cream)]">
             Back to projects
           </button>
         </div>
@@ -130,17 +130,17 @@ export function Session() {
   return (
     <div className="h-[calc(100vh-64px)] flex flex-col">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-slate-800 bg-[var(--bg-card)]">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--line)] bg-[var(--bg-2)]">
         <div className="flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full bg-green-400" />
-          <span className="text-sm text-slate-300">
+          <div className="w-2 h-2 rounded-full bg-[var(--ember)]" />
+          <span className="text-sm">
             {sessionInfo?.fork_repo_name || 'Session'}
           </span>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={openInNewTab}
-            className="flex items-center gap-1 px-3 py-1.5 text-xs text-slate-400 hover:text-white border border-slate-700 rounded-lg hover:border-slate-600 transition"
+            className="btn-ghost flex items-center gap-1 px-3 py-1.5 text-xs"
           >
             <ExternalLink size={12} /> Open in tab
           </button>
@@ -166,8 +166,8 @@ export function Session() {
         {!iframeReady && (
           <div className="absolute inset-0 flex items-center justify-center bg-[var(--bg-main)]">
             <div className="text-center space-y-3">
-              <Loader2 size={24} className="animate-spin text-cyan-400 mx-auto" />
-              <p className="text-slate-400 text-sm">Loading OpenCode interface...</p>
+              <Loader2 size={24} className="animate-spin text-[var(--ember)] mx-auto" />
+              <p className="text-[var(--muted)] text-sm">Loading OpenCode interface...</p>
             </div>
           </div>
         )}

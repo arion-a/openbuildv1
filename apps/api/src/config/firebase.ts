@@ -2,6 +2,10 @@ import admin from 'firebase-admin';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
+if (!process.env.FIREBASE_AUTH_EMULATOR_HOST && process.env.FIREBASE_AUTH_EMULATOR === '1') {
+  process.env.FIREBASE_AUTH_EMULATOR_HOST = '127.0.0.1:9099';
+}
+
 const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 const credentialsFile = process.env.GOOGLE_APPLICATION_CREDENTIALS;
 

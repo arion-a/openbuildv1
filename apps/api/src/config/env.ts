@@ -37,6 +37,12 @@ export const config = {
   gitea: {
     url: process.env.GITEA_URL!,
     adminToken: process.env.GITEA_ADMIN_TOKEN!,
+    // Auto-create a Gitea account/token on signup. On unless explicitly disabled,
+    // and only when Gitea is actually configured — so a dev without Gitea running
+    // (GITEA_AUTO_PROVISION=false) gets instant signups instead of ~8s of timeouts.
+    autoProvision:
+      process.env.GITEA_AUTO_PROVISION !== 'false' &&
+      Boolean(process.env.GITEA_URL && process.env.GITEA_ADMIN_TOKEN),
   },
   docker: {
     socket: process.env.DOCKER_SOCKET || '/var/run/docker.sock',
@@ -51,3 +57,7 @@ export const config = {
     apiKey: process.env.ANTHROPIC_API_KEY!,
   },
 };
+
+export function giteaWebBase(): string {
+  return (config.gitea.url || '').replace(/\/$/, '');
+}

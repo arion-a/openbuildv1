@@ -9,6 +9,12 @@ export async function trendingRoutes(app: FastifyInstance) {
     return trendingService.getTopTrending(limit);
   });
 
+  app.get('/builds', async (request) => {
+    const { limit: rawLimit = 10 } = request.query as any;
+    const limit = Math.min(Math.max(parseInt(rawLimit) || 10, 1), 50);
+    return trendingService.getTrendingBuilds(limit);
+  });
+
   app.get('/domains', async () => {
     const res = await pool.query(`
       SELECT domain, COUNT(*) as idea_count,

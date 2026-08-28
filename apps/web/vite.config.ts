@@ -10,13 +10,13 @@ export default defineConfig({
     allowedHosts: ['build.paritoshraj.com'],
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://127.0.0.1:41935',
         changeOrigin: true,
         ws: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
       '/ws': {
-        target: 'ws://localhost:8000',
+        target: 'ws://127.0.0.1:41935',
         ws: true,
       },
     },
