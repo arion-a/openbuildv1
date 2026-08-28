@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ExternalLink, Pencil, Save, X, Star, Send, GitFork } from 'lucide-react';
+import { ExternalLink, Pencil, Save, X, Star, Send, GitFork, ImagePlus, Loader2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { Avatar } from '../components/Avatar';
 import { MakerLink } from '../components/MakerLink';
+import { Gallery } from '../components/Gallery';
+import { RichText } from '../components/RichText';
+import { imageUploadEnabled, uploadImages } from '../lib/uploadImage';
 
 export function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -22,9 +25,16 @@ export function ProjectDetail() {
   const [editForm, setEditForm] = useState({
     title: '',
     tagline: '',
+    description: '',
+    domain: '',
     live_url: '',
     tools_used: '',
+    how_to_replicate: '',
+    applications: '',
   });
+  const [editMedia, setEditMedia] = useState<string[]>([]);
+  const [mediaBusy, setMediaBusy] = useState(false);
+  const editMediaInput = useRef<HTMLInputElement>(null);
   const { isLoggedIn, user } = useAuth();
   const navigate = useNavigate();
   const isOwner = project && user && project.owner_id === user.id;
@@ -53,10 +63,30 @@ export function ProjectDetail() {
     setEditForm({
       title: project.title || '',
       tagline: project.tagline || '',
+      description: project.description || '',
+      domain: project.domain || '',
       live_url: project.live_url || '',
       tools_used: (project.tools_used || []).join(', '),
+      how_to_replicate: project.how_to_replicate || '',
+      applications: (project.potential_applications || []).join(', '),
     });
+    setEditMedia(Array.isArray(project.media) ? project.media : []);
     setEditing(true);
+  };
+
+  const addEditScreenshots = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (!files.length) return;
+    setMediaBusy(true);
+    try {
+      const uploaded = await uploadImages(files.slice(0, 12 - editMedia.length));
+      setEditMedia((prev) => [...prev, ...uploaded.map((u) => u.url)].slice(0, 12));
+    } catch (err: any) {
+      alert(err.message || 'Could not add those images.');
+    } finally {
+      setMediaBusy(false);
+    }
   };
 
   const handleSave = async () => {
@@ -66,8 +96,13 @@ export function ProjectDetail() {
       const updated = await api.updateProject(id, {
         title: editForm.title,
         tagline: editForm.tagline,
+        description: editForm.description,
+        domain: editForm.domain,
         live_url: editForm.live_url,
         tools_used: editForm.tools_used.split(',').map((t) => t.trim()).filter(Boolean),
+        how_to_replicate: editForm.how_to_replicate,
+        potential_applications: editForm.applications.split(',').map((t) => t.trim()).filter(Boolean),
+        media: editMedia,
       });
       setProject({ ...project, ...updated });
       setEditing(false);
@@ -156,10 +191,18 @@ export function ProjectDetail() {
           ) : (
             <h1 className="font-display text-4xl md:text-5xl leading-tight">{project.title}</h1>
           )}
-          <MakerLink username={project.owner_username} className="inline-flex items-center gap-2 mt-3 text-sm text-[var(--muted)] hover:text-[var(--cream)]">
-            <Avatar src={project.owner_avatar_url} name={[project.owner_name, project.owner_username]} size="xs" />
-            {project.owner_name}
-          </MakerLink>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3 text-sm text-[var(--muted)]">
+            <MakerLink username={project.owner_username} className="inline-flex items-center gap-2 hover:text-[var(--cream)]">
+              <Avatar src={project.owner_avatar_url} name={[project.owner_name, project.owner_username]} size="xs" />
+              {project.owner_name}
+            </MakerLink>
+            {project.domain && <span className="ob-chip">{project.domain}</span>}
+            {project.created_at && (
+              <span className="text-xs">
+                {new Date(project.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+              </span>
+            )}
+          </div>
         </div>
         {isOwner && !editing && (
           <button onClick={startEdit} className="btn-ghost inline-flex items-center gap-1.5 px-4 py-2 text-sm">
@@ -190,7 +233,22 @@ export function ProjectDetail() {
       )}
 
       {editing ? (
-        <div className="space-y-3 mb-6">
+        <div className="space-y-3 mb-8">
+          <label className="block space-y-1">
+            <span className="text-xs text-[var(--muted)]">The story</span>
+            <textarea
+              value={editForm.description}
+              onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+              placeholder="What it does, why you made it, how it went."
+              className="ob-input h-40 resize-none"
+            />
+          </label>
+          <input
+            value={editForm.domain}
+            onChange={(e) => setEditForm({ ...editForm, domain: e.target.value })}
+            placeholder="Domain — productivity, devtools, …"
+            className="ob-input"
+          />
           <input
             value={editForm.live_url}
             onChange={(e) => setEditForm({ ...editForm, live_url: e.target.value })}
@@ -203,9 +261,62 @@ export function ProjectDetail() {
             placeholder="Lovable, Bolt, …"
             className="ob-input"
           />
+          <label className="block space-y-1">
+            <span className="text-xs text-[var(--muted)]">How to replicate</span>
+            <textarea
+              value={editForm.how_to_replicate}
+              onChange={(e) => setEditForm({ ...editForm, how_to_replicate: e.target.value })}
+              placeholder="The prompts or steps that got you here."
+              className="ob-input h-24 resize-none"
+            />
+          </label>
+          <input
+            value={editForm.applications}
+            onChange={(e) => setEditForm({ ...editForm, applications: e.target.value })}
+            placeholder="Also useful for — comma separated"
+            className="ob-input"
+          />
+          {imageUploadEnabled() && (
+            <div className="space-y-2">
+              <span className="text-xs text-[var(--muted)]">Screenshots — first is the cover</span>
+              <div className="flex flex-wrap items-center gap-2">
+                {editMedia.map((url, i) => (
+                  <div key={url} className="relative">
+                    <img src={url} alt={`screenshot ${i + 1}`} className="h-16 w-16 rounded-lg object-cover border border-[var(--line)]" />
+                    <button
+                      type="button"
+                      onClick={() => setEditMedia(editMedia.filter((_, j) => j !== i))}
+                      className="absolute -top-1.5 -right-1.5 bg-[var(--bg)] border border-[var(--line)] rounded-full p-0.5 text-[var(--muted)] hover:text-[var(--cream)]"
+                      aria-label="Remove image"
+                    >
+                      <X size={11} />
+                    </button>
+                  </div>
+                ))}
+                {editMedia.length < 12 && (
+                  <button
+                    type="button"
+                    onClick={() => editMediaInput.current?.click()}
+                    disabled={mediaBusy}
+                    className="h-16 w-16 rounded-lg border border-dashed border-[var(--line)] flex items-center justify-center text-[var(--muted)] hover:text-[var(--cream)] hover:border-[var(--ember)]/50 disabled:opacity-50"
+                    aria-label="Add screenshots"
+                  >
+                    {mediaBusy ? <Loader2 size={16} className="animate-spin" /> : <ImagePlus size={16} />}
+                  </button>
+                )}
+              </div>
+              <input ref={editMediaInput} type="file" accept="image/*" multiple className="hidden" onChange={addEditScreenshots} />
+            </div>
+          )}
         </div>
       ) : (
         <>
+          {(project.media || []).length > 0 && (
+            <div className="mb-8">
+              <Gallery images={project.media} title={project.title} />
+            </div>
+          )}
+
           <div className="flex flex-wrap gap-2 mb-8">
             {project.live_url && (
               <a
@@ -244,6 +355,28 @@ export function ProjectDetail() {
                   {tool}
                 </span>
               ))}
+            </div>
+          )}
+
+          {project.description && (
+            <RichText text={project.description} className="text-[var(--cream)]/90 leading-relaxed mb-10 text-[15px]" />
+          )}
+
+          {project.how_to_replicate && (
+            <div className="mb-10">
+              <h3 className="font-display text-2xl mb-2">How it was made</h3>
+              <RichText text={project.how_to_replicate} className="text-[var(--muted)] leading-relaxed text-[15px]" />
+            </div>
+          )}
+
+          {(project.potential_applications || []).length > 0 && (
+            <div className="mb-10">
+              <p className="label-kicker mb-2">Also good for</p>
+              <div className="flex flex-wrap gap-2">
+                {project.potential_applications.map((a: string) => (
+                  <span key={a} className="ob-chip">{a}</span>
+                ))}
+              </div>
             </div>
           )}
         </>

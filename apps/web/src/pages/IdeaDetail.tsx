@@ -5,11 +5,15 @@ import { api } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { Avatar } from '../components/Avatar';
 import { MakerLink } from '../components/MakerLink';
+import { Gallery } from '../components/Gallery';
+import { RichText } from '../components/RichText';
 
 interface Idea {
   id: string;
   title: string;
   body: string;
+  domain?: string | null;
+  media?: string[] | null;
   upvotes: number;
   upvoted?: boolean;
   author: string;
@@ -116,10 +120,18 @@ export function IdeaDetail() {
               {idea.author || idea.author_username}
             </MakerLink>
             <span className="text-xs text-[var(--muted)] ml-2">{timeAgo(idea.created_at)}</span>
+            {idea.domain && <span className="ob-chip ml-2 align-middle">{idea.domain}</span>}
           </div>
         </div>
         <h1 className="font-display text-3xl md:text-4xl">{idea.title}</h1>
-        <p className="text-sm text-[var(--muted)] mt-3 whitespace-pre-wrap leading-relaxed">{idea.body}</p>
+        {idea.body && (
+          <RichText text={idea.body} className="text-sm text-[var(--muted)] mt-3 leading-relaxed" />
+        )}
+        {(idea.media || []).length > 0 && (
+          <div className="mt-4">
+            <Gallery images={idea.media as string[]} title={idea.title} />
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-2 mt-6">
           <button
             onClick={handleVote}
