@@ -137,6 +137,7 @@ export const api = {
 
   // Trending
   getTrending: () => request('/trending'),
+  getTrendingBuilds: (limit = 10) => request(`/trending/builds?limit=${limit}`),
   getDomains: () => request('/trending/domains'),
 
   // Settings

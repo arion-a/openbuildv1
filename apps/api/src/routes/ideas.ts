@@ -31,7 +31,7 @@ export async function ideaRoutes(app: FastifyInstance) {
     const { domain, tags, sort: rawSort, limit: rawLimit = 20, offset: rawOffset = 0 } = request.query as any;
     const limit = Math.min(Math.max(parseInt(rawLimit) || 20, 1), 100);
     const offset = Math.max(parseInt(rawOffset) || 0, 0);
-    const sort = ['new', 'top', 'discussed'].includes(rawSort) ? rawSort : 'new';
+    const sort = ['new', 'top', 'discussed', 'trending'].includes(rawSort) ? rawSort : 'new';
     let query = `
       SELECT i.*, COALESCE(NULLIF(TRIM(u.display_name), ''), u.username) as author, u.username as author_username, u.avatar_url as author_avatar_url,
         (SELECT COUNT(*) FROM idea_threads WHERE idea_id = i.id) as thread_count
@@ -56,7 +56,13 @@ export async function ideaRoutes(app: FastifyInstance) {
         ? 'i.upvotes DESC, i.created_at DESC'
         : sort === 'discussed'
           ? 'thread_count DESC, i.created_at DESC'
-          : 'i.created_at DESC';
+          : sort === 'trending'
+            ? `(i.upvotes * 2
+                + (SELECT COUNT(*) FROM idea_threads WHERE idea_id = i.id) * 3
+                + CASE WHEN i.created_at > NOW() - INTERVAL '3 days' THEN 12
+                       WHEN i.created_at > NOW() - INTERVAL '14 days' THEN 6
+                       ELSE 0 END) DESC, i.created_at DESC`
+            : 'i.created_at DESC';
     query += ` ORDER BY ${orderBy} LIMIT $${paramIdx++} OFFSET $${paramIdx++}`;
     params.push(limit, offset);
 

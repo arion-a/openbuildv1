@@ -8,6 +8,7 @@ import { FilterBar } from '../components/FilterBar';
 
 const SORTS = [
   { id: 'new', label: 'Newest' },
+  { id: 'trending', label: 'Popular' },
   { id: 'top', label: 'Most voted' },
   { id: 'discussed', label: 'Most discussed' },
 ];

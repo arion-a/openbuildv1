@@ -65,7 +65,7 @@ export async function projectRoutes(app: FastifyInstance) {
     const { domain, status, tool, sort: rawSort, limit: rawLimit = 20, offset: rawOffset = 0 } = request.query as any;
     const limit = Math.min(Math.max(parseInt(rawLimit) || 20, 1), 100);
     const offset = Math.max(parseInt(rawOffset) || 0, 0);
-    const sort = ['new', 'top', 'stars'].includes(rawSort) ? rawSort : 'new';
+    const sort = ['new', 'top', 'stars', 'trending'].includes(rawSort) ? rawSort : 'new';
     let query = `
       SELECT p.*, COALESCE(NULLIF(TRIM(u.display_name), ''), u.username) as owner_name, u.username as owner_username, u.avatar_url as owner_avatar_url,
         (SELECT COUNT(*) FROM project_contributors WHERE project_id = p.id) as contributor_count,
@@ -91,12 +91,21 @@ export async function projectRoutes(app: FastifyInstance) {
       params.push(tool);
     }
 
+    const trendingScore = `(
+      p.upvotes * 2
+      + (SELECT COUNT(*) FROM project_reviews r WHERE r.project_id = p.id) * 4
+      + CASE WHEN p.created_at > NOW() - INTERVAL '3 days' THEN 12
+             WHEN p.created_at > NOW() - INTERVAL '14 days' THEN 6
+             ELSE 0 END
+    )`;
     const orderBy =
       sort === 'top'
         ? 'avg_rating DESC, review_count DESC, p.created_at DESC'
         : sort === 'stars'
           ? 'p.upvotes DESC, p.created_at DESC'
-          : 'p.created_at DESC';
+          : sort === 'trending'
+            ? `${trendingScore} DESC, p.created_at DESC`
+            : 'p.created_at DESC';
     query += ` ORDER BY ${orderBy} LIMIT $${paramIdx++} OFFSET $${paramIdx++}`;
     params.push(limit, offset);
 

@@ -10,6 +10,7 @@ import { swatchGradient } from '../lib/swatch';
 
 const SORTS = [
   { id: 'new', label: 'Newest' },
+  { id: 'trending', label: 'Popular' },
   { id: 'top', label: 'Top rated' },
   { id: 'stars', label: 'Most starred' },
 ];
