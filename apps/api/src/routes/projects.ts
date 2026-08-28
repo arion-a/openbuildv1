@@ -62,9 +62,10 @@ async function extractUserId(app: FastifyInstance, request: any): Promise<string
 
 export async function projectRoutes(app: FastifyInstance) {
   app.get('/', async (request) => {
-    const { domain, status, limit: rawLimit = 20, offset: rawOffset = 0 } = request.query as any;
+    const { domain, status, tool, sort: rawSort, limit: rawLimit = 20, offset: rawOffset = 0 } = request.query as any;
     const limit = Math.min(Math.max(parseInt(rawLimit) || 20, 1), 100);
     const offset = Math.max(parseInt(rawOffset) || 0, 0);
+    const sort = ['new', 'top', 'stars'].includes(rawSort) ? rawSort : 'new';
     let query = `
       SELECT p.*, COALESCE(NULLIF(TRIM(u.display_name), ''), u.username) as owner_name, u.username as owner_username, u.avatar_url as owner_avatar_url,
         (SELECT COUNT(*) FROM project_contributors WHERE project_id = p.id) as contributor_count,
@@ -85,8 +86,18 @@ export async function projectRoutes(app: FastifyInstance) {
       query += ` AND p.status = $${paramIdx++}`;
       params.push(status);
     }
+    if (tool) {
+      query += ` AND $${paramIdx++} = ANY(p.tools_used)`;
+      params.push(tool);
+    }
 
-    query += ` ORDER BY p.created_at DESC LIMIT $${paramIdx++} OFFSET $${paramIdx++}`;
+    const orderBy =
+      sort === 'top'
+        ? 'avg_rating DESC, review_count DESC, p.created_at DESC'
+        : sort === 'stars'
+          ? 'p.upvotes DESC, p.created_at DESC'
+          : 'p.created_at DESC';
+    query += ` ORDER BY ${orderBy} LIMIT $${paramIdx++} OFFSET $${paramIdx++}`;
     params.push(limit, offset);
 
     const currentUserId = await extractUserId(app, request);

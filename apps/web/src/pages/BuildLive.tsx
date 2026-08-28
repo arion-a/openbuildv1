@@ -1,11 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowUpRight, Star } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { Avatar } from '../components/Avatar';
 import { MakerLink } from '../components/MakerLink';
+import { FilterBar } from '../components/FilterBar';
 import { swatchGradient } from '../lib/swatch';
+
+const SORTS = [
+  { id: 'new', label: 'Newest' },
+  { id: 'top', label: 'Top rated' },
+  { id: 'stars', label: 'Most starred' },
+];
 
 interface Project {
   id: string;
@@ -13,6 +20,7 @@ interface Project {
   tagline: string;
   domain?: string | null;
   media?: string[] | null;
+  tools_used?: string[] | null;
   owner_name: string;
   owner_username?: string;
   live_url?: string | null;
@@ -25,38 +33,69 @@ interface Project {
 
 export function BuildLive() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [facets, setFacets] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  const [sort, setSort] = useState('new');
+  const [domain, setDomain] = useState('');
+  const [tool, setTool] = useState('');
   const { isLoggedIn } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const ideaId = searchParams.get('idea');
 
+  const domains = useMemo(
+    () => [...new Set(facets.map((p) => p.domain).filter(Boolean) as string[])].sort(),
+    [facets]
+  );
+  const tools = useMemo(
+    () => [...new Set(facets.flatMap((p) => p.tools_used || []))].sort(),
+    [facets]
+  );
+
+  // One unfiltered load to populate the filter dropdowns.
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      let lastErr = '';
       for (let i = 0; i < 8; i++) {
         try {
           const rows = await api.getProjects();
-          if (!cancelled) {
-            setProjects(rows);
-            setLoadError('');
-          }
+          if (!cancelled) setFacets(rows);
           return;
-        } catch (err: any) {
-          lastErr = err.message || 'Could not load builds';
+        } catch {
           await new Promise((r) => setTimeout(r, 750));
         }
       }
-      if (!cancelled) setLoadError(lastErr);
-    })().finally(() => {
-      if (!cancelled) setLoading(false);
-    });
+    })();
     return () => {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    const qs = new URLSearchParams();
+    if (sort !== 'new') qs.set('sort', sort);
+    if (domain) qs.set('domain', domain);
+    if (tool) qs.set('tool', tool);
+    api
+      .getProjects(qs.toString())
+      .then((rows) => {
+        if (cancelled) return;
+        setProjects(rows);
+        setLoadError('');
+      })
+      .catch((err: any) => {
+        if (!cancelled) setLoadError(err.message || 'Could not load builds');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [sort, domain, tool]);
 
   useEffect(() => {
     if (!ideaId) return;
@@ -88,12 +127,24 @@ export function BuildLive() {
 
   return (
     <div className="max-w-5xl mx-auto px-5 md:px-10 py-10 md:py-14">
-      <div className="mb-8 md:mb-10">
+      <div className="mb-6 md:mb-8">
         <h1 className="font-display text-4xl md:text-5xl leading-[0.95]">Builds</h1>
         <p className="text-[var(--muted)] max-w-lg text-sm mt-3 leading-relaxed">
           Live apps from people building with AI. Try one, star it, or post your own.
         </p>
       </div>
+
+      <FilterBar
+        sort={sort}
+        onSort={setSort}
+        sorts={SORTS}
+        domain={domain}
+        onDomain={setDomain}
+        domains={domains}
+        tool={tool}
+        onTool={setTool}
+        tools={tools}
+      />
 
       {loading ? (
         <p className="text-[var(--muted)]">Loading…</p>
@@ -101,9 +152,9 @@ export function BuildLive() {
         <p className="text-[var(--muted)] text-sm">{loadError}</p>
       ) : projects.length === 0 ? (
         <div className="ob-card p-8 md:p-10">
-          <p className="font-display text-2xl mb-2">No builds yet</p>
+          <p className="font-display text-2xl mb-2">{domain || tool ? 'Nothing here' : 'No builds yet'}</p>
           <p className="text-[var(--muted)] text-sm mb-6 max-w-md">
-            Post a live app and it will show up here.
+            {domain || tool ? 'Try a different filter.' : 'Post a live app and it will show up here.'}
           </p>
           <button onClick={goPublish} className="btn-ember px-5 py-2.5 text-sm">
             Post a build

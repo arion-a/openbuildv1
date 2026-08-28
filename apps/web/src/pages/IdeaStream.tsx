@@ -1,9 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { Avatar } from '../components/Avatar';
 import { MakerLink } from '../components/MakerLink';
+import { FilterBar } from '../components/FilterBar';
+
+const SORTS = [
+  { id: 'new', label: 'Newest' },
+  { id: 'top', label: 'Most voted' },
+  { id: 'discussed', label: 'Most discussed' },
+];
 
 interface Idea {
   id: string;
@@ -29,17 +36,47 @@ function timeAgo(date: string) {
 
 export function IdeaStream() {
   const [ideas, setIdeas] = useState<Idea[]>([]);
+  const [facets, setFacets] = useState<Idea[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  const [sort, setSort] = useState('new');
+  const [domain, setDomain] = useState('');
   const { user, isLoggedIn } = useAuth();
   const navigate = useNavigate();
 
+  const domains = useMemo(
+    () => [...new Set(facets.map((i) => i.domain).filter(Boolean) as string[])].sort(),
+    [facets]
+  );
+
   useEffect(() => {
-    api.getIdeas()
-      .then(setIdeas)
-      .catch((err) => setLoadError(err.message || 'Could not load ideas'))
-      .finally(() => setLoading(false));
+    api.getIdeas().then(setFacets).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    const qs = new URLSearchParams();
+    if (sort !== 'new') qs.set('sort', sort);
+    if (domain) qs.set('domain', domain);
+    api
+      .getIdeas(qs.toString())
+      .then((rows) => {
+        if (!cancelled) {
+          setIdeas(rows);
+          setLoadError('');
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) setLoadError(err.message || 'Could not load ideas');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [sort, domain]);
 
   const handleUpvote = async (e: React.MouseEvent, ideaId: string) => {
     e.preventDefault();
@@ -67,17 +104,19 @@ export function IdeaStream() {
       <h1 className="font-display text-4xl md:text-5xl leading-[0.95] mb-3">
         Ideas
       </h1>
-      <p className="text-[var(--muted)] text-sm max-w-md mb-8 leading-relaxed">
+      <p className="text-[var(--muted)] text-sm max-w-md mb-6 leading-relaxed">
         Early thoughts. Star or comment if you’d use it.
       </p>
 
       <button
         onClick={goPublishIdea}
-        className="ob-card w-full flex items-center gap-3 px-4 py-4 text-left mb-8"
+        className="ob-card w-full flex items-center gap-3 px-4 py-4 text-left mb-6"
       >
         <Avatar src={user?.avatar_url} name={[user?.display_name, user?.username, user?.email]} size="md" />
         <span className="text-[var(--muted)]">What’s the idea?</span>
       </button>
+
+      <FilterBar sort={sort} onSort={setSort} sorts={SORTS} domain={domain} onDomain={setDomain} domains={domains} />
 
       {loading ? (
         <p className="text-[var(--muted)]">Loading…</p>
