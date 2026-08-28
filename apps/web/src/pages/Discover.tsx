@@ -64,7 +64,7 @@ export function Discover() {
   return (
     <div className="max-w-4xl mx-auto px-5 md:px-10 py-10 md:py-14">
       <h1 className="font-display text-4xl md:text-5xl leading-[0.95]">Discover</h1>
-      <p className="text-[var(--muted)] text-sm mt-3 mb-6 max-w-lg leading-relaxed">
+      <p className="text-[var(--cream)]/70 text-[0.95rem] mt-3 mb-7 max-w-lg leading-relaxed">
         Find something to use — or something worth building. Sorted by what people are actually engaging with.
       </p>
 
@@ -89,18 +89,18 @@ export function Discover() {
       {loading ? (
         <p className="text-[var(--muted)]">Loading…</p>
       ) : (
-        <div className="grid md:grid-cols-2 gap-8">
+        <div className="grid md:grid-cols-2 gap-x-10 gap-y-10">
           <section>
-            <p className="label-kicker mb-3">Try these</p>
+            <p className="label-kicker mb-4">Try these</p>
             {b.length === 0 ? (
               <p className="text-sm text-[var(--muted)]">Nothing here yet.</p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {b.map((x) => (
-                  <div key={x.id} className="ob-card p-4">
-                    <Link to={`/buildlive/${x.id}`} className="flex gap-3">
+                  <div key={x.id} className="ob-card p-5">
+                    <Link to={`/buildlive/${x.id}`} className="flex gap-4">
                       <div
-                        className="shrink-0 h-14 w-20 rounded-lg bg-cover bg-center"
+                        className="shrink-0 h-16 w-24 rounded-lg bg-cover bg-center"
                         style={
                           x.media?.[0]
                             ? { backgroundImage: `url(${x.media[0]})` }
@@ -108,11 +108,13 @@ export function Discover() {
                         }
                       />
                       <div className="min-w-0">
-                        <p className="font-display text-lg leading-tight">{x.title}</p>
-                        {x.tagline && <p className="text-sm text-[var(--muted)] line-clamp-2">{x.tagline}</p>}
+                        <p className="font-display text-xl leading-tight">{x.title}</p>
+                        {x.tagline && (
+                          <p className="text-[0.95rem] leading-relaxed text-[var(--cream)]/75 line-clamp-2 mt-1">{x.tagline}</p>
+                        )}
                       </div>
                     </Link>
-                    <div className="flex items-center justify-between mt-3 text-xs">
+                    <div className="flex items-center justify-between mt-4 text-xs">
                       <MakerLink
                         username={x.owner_username}
                         className="inline-flex items-center gap-1.5 text-[var(--muted)] hover:text-[var(--cream)]"
@@ -145,16 +147,18 @@ export function Discover() {
           </section>
 
           <section>
-            <p className="label-kicker gold mb-3">Wanted</p>
+            <p className="label-kicker gold mb-4">Wanted</p>
             {i.length === 0 ? (
               <p className="text-sm text-[var(--muted)]">No open ideas here yet.</p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {i.map((x) => (
-                  <Link key={x.id} to={`/ideastream/${x.id}`} className="ob-card block p-4">
-                    <p className="font-display text-lg leading-tight">{x.title}</p>
-                    {x.body && <p className="text-sm text-[var(--muted)] line-clamp-2 mt-1">{x.body}</p>}
-                    <div className="flex items-center gap-3 mt-3 text-xs text-[var(--muted)]">
+                  <Link key={x.id} to={`/ideastream/${x.id}`} className="ob-card block p-5">
+                    <p className="font-display text-xl leading-tight">{x.title}</p>
+                    {x.body && (
+                      <p className="text-[0.95rem] leading-relaxed text-[var(--cream)]/75 line-clamp-2 mt-1.5">{x.body}</p>
+                    )}
+                    <div className="flex items-center gap-3 mt-4 text-xs text-[var(--muted)]">
                       <span className="inline-flex items-center gap-1.5">
                         <Avatar src={x.author_avatar_url} name={[x.author, x.author_username]} size="xs" />
                         {x.author}

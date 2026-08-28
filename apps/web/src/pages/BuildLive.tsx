@@ -195,7 +195,7 @@ export function BuildLive() {
                       )}
                     </div>
                     {project.tagline && (
-                      <p className="text-sm text-[var(--muted)] mt-2 line-clamp-2">{project.tagline}</p>
+                      <p className="text-[0.95rem] leading-relaxed text-[var(--cream)]/75 mt-2 line-clamp-2">{project.tagline}</p>
                     )}
                     {project.domain && (
                       <span className="ob-chip mt-3">{project.domain}</span>

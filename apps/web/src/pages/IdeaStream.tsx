@@ -158,7 +158,7 @@ export function IdeaStream() {
                 <div className="flex gap-4">
                   <div className="min-w-0 flex-1">
                     <h2 className="font-display text-2xl leading-tight hover:text-[var(--ember)] transition-colors">{idea.title}</h2>
-                    {idea.body && <p className="text-sm text-[var(--muted)] mt-2 line-clamp-3">{idea.body}</p>}
+                    {idea.body && <p className="text-[0.95rem] leading-relaxed text-[var(--cream)]/75 mt-2 line-clamp-3">{idea.body}</p>}
                   </div>
                   {idea.media && idea.media[0] && (
                     <img src={idea.media[0]} alt="" className="shrink-0 h-20 w-20 rounded-lg object-cover border border-[var(--line)]" />

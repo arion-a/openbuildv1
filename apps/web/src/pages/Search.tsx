@@ -79,7 +79,7 @@ export function Search() {
                     />
                     <div className="min-w-0">
                       <p className="font-display text-lg leading-tight">{b.title}</p>
-                      {b.tagline && <p className="text-sm text-[var(--muted)] line-clamp-1">{b.tagline}</p>}
+                      {b.tagline && <p className="text-sm text-[var(--cream)]/75 leading-relaxed line-clamp-1">{b.tagline}</p>}
                       <p className="text-xs text-[var(--muted)] mt-0.5">
                         {b.owner_name}
                         {b.domain ? ` · ${b.domain}` : ''}
@@ -98,7 +98,7 @@ export function Search() {
                 {res!.ideas.map((i) => (
                   <Link key={i.id} to={`/ideastream/${i.id}`} className="ob-card block p-4">
                     <p className="font-display text-lg leading-tight">{i.title}</p>
-                    {i.body && <p className="text-sm text-[var(--muted)] line-clamp-2 mt-1">{i.body}</p>}
+                    {i.body && <p className="text-sm text-[var(--cream)]/75 leading-relaxed line-clamp-2 mt-1">{i.body}</p>}
                     <p className="text-xs text-[var(--muted)] mt-1">
                       {i.author}
                       {i.domain ? ` · ${i.domain}` : ''}
