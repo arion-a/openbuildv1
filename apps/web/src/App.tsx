@@ -18,6 +18,7 @@ import { Landing } from './pages/Landing';
 import { Search } from './pages/Search';
 import { Discover } from './pages/Discover';
 import { Notifications } from './pages/Notifications';
+import { Welcome } from './pages/Welcome';
 import { useAuth } from './hooks/useAuth';
 
 function Home() {
@@ -58,6 +59,7 @@ export default function App() {
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/messages" element={<Messages />} />
           <Route path="/notifications" element={<Notifications />} />
+          <Route path="/welcome" element={<Welcome />} />
         </Route>
       </Routes>
     </BrowserRouter>

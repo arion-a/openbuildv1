@@ -49,10 +49,11 @@ export function Auth() {
   const [searchParams] = useSearchParams();
   const { isLoggedIn, user, setUser } = useAuth();
 
-  const afterLogin = (handle: string) => {
+  const afterLogin = (handle: string, isNew = false) => {
     const stored = sessionStorage.getItem('ob_auth_next');
     if (stored) sessionStorage.removeItem('ob_auth_next');
-    navigate(safeNext(searchParams.get('next')) || safeNext(stored) || `/u/${handle}`);
+    const next = safeNext(searchParams.get('next')) || safeNext(stored);
+    navigate(next || (isNew ? '/welcome' : `/u/${handle}`));
   };
 
   useEffect(() => {
@@ -77,7 +78,7 @@ export function Auth() {
           idToken,
           ghName ? { github_username: ghName, github_url: `https://github.com/${ghName}` } : undefined
         );
-        if (!cancelled) afterLogin(data.user.username);
+        if (!cancelled) afterLogin(data.user.username, !!info?.isNewUser);
       } catch (err: any) {
         sessionStorage.removeItem('ob_oauth');
         if (!cancelled) setError(authErrorMessage(err));
@@ -129,7 +130,7 @@ export function Auth() {
         });
         if (data.token) localStorage.setItem('ob_jwt', data.token);
         setUser(data.user);
-        afterLogin(data.user.username);
+        afterLogin(data.user.username, mode === 'signup');
         return;
       }
       if (!auth) return;
@@ -144,7 +145,7 @@ export function Auth() {
       }
       const idToken = await cred.user.getIdToken();
       const data = await syncWithBackend(idToken);
-      afterLogin(data.user.username);
+      afterLogin(data.user.username, mode === 'signup');
     } catch (err: any) {
       setError(authErrorMessage(err));
     } finally {
