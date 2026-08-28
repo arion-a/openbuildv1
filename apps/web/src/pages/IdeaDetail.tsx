@@ -228,6 +228,24 @@ export function IdeaDetail() {
           Log in to comment
         </button>
       )}
+
+      {isLoggedIn() && user?.username !== idea.author_username && (
+        <button
+          onClick={async () => {
+            const detail = window.prompt('Report this idea — what’s wrong? (optional)');
+            if (detail === null) return;
+            try {
+              await api.report({ kind: 'idea', ref_id: idea.id, detail: detail || undefined });
+              alert('Thanks — the team will take a look.');
+            } catch (err: any) {
+              alert(err.message || 'Could not send that.');
+            }
+          }}
+          className="mt-6 text-xs text-[var(--muted)] hover:text-[var(--cream)]"
+        >
+          Report
+        </button>
+      )}
     </div>
   );
 }

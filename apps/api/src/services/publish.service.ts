@@ -244,8 +244,19 @@ export async function deleteDraft(userId: string, id: string) {
   await pool.query('DELETE FROM publications WHERE id = $1 AND author_id = $2 AND status = $3', [id, userId, 'draft']);
 }
 
+async function assertPublishRate(userId: string) {
+  const res = await pool.query(
+    "SELECT COUNT(*)::int AS n FROM publications WHERE author_id = $1 AND status = 'published' AND published_at > NOW() - INTERVAL '1 hour'",
+    [userId]
+  );
+  if (res.rows[0].n >= 8) {
+    throw new PublishError(429, 'You’ve published a lot in the last hour. Give it a bit.');
+  }
+}
+
 export async function createLive(userId: string, input: PublishInput) {
   const data = normalize(input, { requireTitle: true, requireIdeaBody: true });
+  await assertPublishRate(userId);
   if (data.kind === 'build') {
     const project = await insertProject(userId, data);
     const publication = await insertPublicationRow(userId, data, { status: 'published', project_id: project.id });
@@ -261,6 +272,7 @@ export async function publishDraft(userId: string, id: string) {
   if (existing.status === 'published') {
     return { publication: existing, project: null, idea: null, already: true };
   }
+  await assertPublishRate(userId);
   const data = normalize(existing, { requireTitle: true, requireIdeaBody: true });
   if (data.kind === 'build') {
     const project = await insertProject(userId, data);

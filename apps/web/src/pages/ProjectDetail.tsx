@@ -478,15 +478,34 @@ export function ProjectDetail() {
         <Link to="/auth" className="text-sm text-[var(--muted)] hover:text-[var(--cream)]">Sign in to comment</Link>
       )}
 
-      {isLoggedIn() && (
-        <button
-          onClick={handleJoin}
-          disabled={joining}
-          className="mt-8 text-xs text-[var(--muted)] hover:text-[var(--cream)] inline-flex items-center gap-1"
-        >
-          <GitFork size={12} /> {joining ? 'Starting…' : 'Open workspace'}
-        </button>
-      )}
+      <div className="mt-8 flex items-center gap-4">
+        {isLoggedIn() && (
+          <button
+            onClick={handleJoin}
+            disabled={joining}
+            className="text-xs text-[var(--muted)] hover:text-[var(--cream)] inline-flex items-center gap-1"
+          >
+            <GitFork size={12} /> {joining ? 'Starting…' : 'Open workspace'}
+          </button>
+        )}
+        {isLoggedIn() && !isOwner && (
+          <button
+            onClick={async () => {
+              const detail = window.prompt('Report this build — what’s wrong? (optional)');
+              if (detail === null) return;
+              try {
+                await api.report({ kind: 'build', ref_id: id, detail: detail || undefined });
+                alert('Thanks — the team will take a look.');
+              } catch (err: any) {
+                alert(err.message || 'Could not send that.');
+              }
+            }}
+            className="text-xs text-[var(--muted)] hover:text-[var(--cream)]"
+          >
+            Report
+          </button>
+        )}
+      </div>
     </div>
   );
 }

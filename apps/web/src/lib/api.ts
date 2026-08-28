@@ -151,6 +151,10 @@ export const api = {
   toggleFollow: (username: string) => request(`/follows/${encodeURIComponent(username)}`, { method: 'POST' }),
   followingFeed: (kind?: 'builds' | 'ideas') => request(`/follows/feed${kind ? `?kind=${kind}` : ''}`),
 
+  // Moderation
+  report: (data: { kind: string; ref_id?: string; reason?: string; detail?: string }) =>
+    request('/report', { method: 'POST', body: JSON.stringify(data) }),
+
   // Trending
   getTrending: () => request('/trending'),
   getTrendingBuilds: (limit = 10) => request(`/trending/builds?limit=${limit}`),

@@ -101,6 +101,23 @@ export async function ensureWaitlistTable() {
   `);
 }
 
+/** Moderation: user-submitted reports on content or people. */
+export async function ensureModerationTables() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS reports (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      reporter_id UUID REFERENCES users(id) ON DELETE SET NULL,
+      kind VARCHAR(20) NOT NULL,
+      ref_id UUID,
+      reason VARCHAR(40),
+      detail TEXT,
+      status VARCHAR(20) NOT NULL DEFAULT 'open',
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_reports_status ON reports (status, created_at DESC);
+  `);
+}
+
 /** Phase 3 social: direct messages, notifications, follows. */
 export async function ensureSocialTables() {
   await pool.query(`
