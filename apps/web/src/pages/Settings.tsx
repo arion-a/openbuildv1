@@ -3,20 +3,7 @@ import { Key, FileText, Save, CheckCircle, User, Camera, Loader2 } from 'lucide-
 import { api } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { Avatar } from '../components/Avatar';
-
-const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY;
-
-async function uploadToImgbb(file: File): Promise<string> {
-  const formData = new FormData();
-  formData.append('image', file);
-  const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
-    method: 'POST',
-    body: formData,
-  });
-  if (!res.ok) throw new Error('Image upload failed');
-  const data = await res.json();
-  return data.data.display_url;
-}
+import { uploadImage } from '../lib/uploadImage';
 
 export function Settings() {
   const { user, setUser } = useAuth();
@@ -68,14 +55,9 @@ export function Settings() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Image must be under 5MB');
-      return;
-    }
-
     setUploadingAvatar(true);
     try {
-      const url = await uploadToImgbb(file);
+      const { url } = await uploadImage(file);
       setAvatarUrl(url);
       await api.updateProfile({ avatar_url: url });
       setUser({ ...user!, avatar_url: url });
