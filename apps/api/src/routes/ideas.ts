@@ -3,6 +3,7 @@ import { pool } from '../db/pool.js';
 import { llmService } from '../services/llm.service.js';
 import { firebaseAdmin } from '../config/firebase.js';
 import { createLive, PublishError } from '../services/publish.service.js';
+import { notify } from '../services/notify.js';
 
 async function extractUserId(app: FastifyInstance, request: any): Promise<string | null> {
   const authHeader = request.headers.authorization;
@@ -167,6 +168,10 @@ export async function ideaRoutes(app: FastifyInstance) {
       [ideaId, userId, body, parent_id || null]
     );
     const thread = res.rows[0];
+    const ideaOwner = await pool.query('SELECT author_id FROM ideas WHERE id = $1', [ideaId]);
+    if (ideaOwner.rows[0]) {
+      await notify({ userId: ideaOwner.rows[0].author_id, actorId: userId, type: 'comment_idea', refKind: 'idea', refId: ideaId });
+    }
     const userRes = await pool.query('SELECT display_name, username, avatar_url FROM users WHERE id = $1', [userId]);
     const u = userRes.rows[0];
     return { ...thread, username: (u?.display_name && String(u.display_name).trim()) || u?.username, handle: u?.username, avatar_url: u?.avatar_url };
@@ -193,9 +198,12 @@ export async function ideaRoutes(app: FastifyInstance) {
         await client.query('UPDATE ideas SET upvotes = upvotes + 1 WHERE id = $1', [id]);
       }
 
-      const res = await client.query('SELECT upvotes FROM ideas WHERE id = $1', [id]);
+      const res = await client.query('SELECT upvotes, author_id FROM ideas WHERE id = $1', [id]);
       await client.query('COMMIT');
       const upvoted = existing.rows.length === 0;
+      if (upvoted && res.rows[0]) {
+        await notify({ userId: res.rows[0].author_id, actorId: userId, type: 'star_idea', refKind: 'idea', refId: id });
+      }
       return { upvotes: res.rows[0]?.upvotes, upvoted };
     } catch (err) {
       await client.query('ROLLBACK');

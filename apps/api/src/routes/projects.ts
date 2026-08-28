@@ -4,6 +4,7 @@ import { gitService } from '../services/git.service.js';
 import { decrypt, giteaWebBase } from '../config/env.js';
 import { firebaseAdmin } from '../config/firebase.js';
 import { cleanHttpUrl, createLive, sanitizeMedia, PublishError } from '../services/publish.service.js';
+import { notify } from '../services/notify.js';
 import { readFileSync, createWriteStream, mkdirSync, readdirSync, statSync } from 'fs';
 import { mkdtemp, rm } from 'fs/promises';
 import { tmpdir } from 'os';
@@ -308,7 +309,7 @@ export async function projectRoutes(app: FastifyInstance) {
   app.post('/:id/upvote', { preHandler: [(app as any).authenticate] }, async (request, reply) => {
     const { id } = request.params as any;
     const { id: userId } = (request as any).user;
-    const exists = await pool.query('SELECT id FROM projects WHERE id = $1', [id]);
+    const exists = await pool.query('SELECT id, owner_id FROM projects WHERE id = $1', [id]);
     if (!exists.rows[0]) return reply.status(404).send({ error: 'Not found' });
 
     const client = await pool.connect();
@@ -327,7 +328,11 @@ export async function projectRoutes(app: FastifyInstance) {
       }
       const res = await client.query('SELECT upvotes FROM projects WHERE id = $1', [id]);
       await client.query('COMMIT');
-      return { upvotes: res.rows[0]?.upvotes || 0, upvoted: existing.rows.length === 0 };
+      const upvoted = existing.rows.length === 0;
+      if (upvoted) {
+        await notify({ userId: exists.rows[0].owner_id, actorId: userId, type: 'star_build', refKind: 'build', refId: id });
+      }
+      return { upvotes: res.rows[0]?.upvotes || 0, upvoted };
     } catch (err) {
       await client.query('ROLLBACK');
       throw err;
@@ -356,13 +361,14 @@ export async function projectRoutes(app: FastifyInstance) {
     if (!body || typeof body !== 'string' || body.length > 50000) {
       return reply.status(400).send({ error: 'Body is required and must be under 50000 characters' });
     }
-    const project = await pool.query('SELECT id FROM projects WHERE id = $1', [id]);
+    const project = await pool.query('SELECT id, owner_id FROM projects WHERE id = $1', [id]);
     if (!project.rows[0]) return reply.status(404).send({ error: 'Not found' });
 
     const res = await pool.query(
       `INSERT INTO project_threads (project_id, author_id, body) VALUES ($1, $2, $3) RETURNING *`,
       [id, userId, body]
     );
+    await notify({ userId: project.rows[0].owner_id, actorId: userId, type: 'comment_build', refKind: 'build', refId: id });
     const userRes = await pool.query('SELECT display_name, username, avatar_url FROM users WHERE id = $1', [userId]);
     const u = userRes.rows[0];
     return { ...res.rows[0], username: (u?.display_name && String(u.display_name).trim()) || u?.username, handle: u?.username, avatar_url: u?.avatar_url };
@@ -411,6 +417,7 @@ export async function projectRoutes(app: FastifyInstance) {
        RETURNING *`,
       [id, userId, rating, text || null]
     );
+    await notify({ userId: project.rows[0].owner_id, actorId: userId, type: 'review_build', refKind: 'build', refId: id });
     const userRes = await pool.query('SELECT display_name, username, avatar_url FROM users WHERE id = $1', [userId]);
     const u = userRes.rows[0];
     return {

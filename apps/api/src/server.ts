@@ -20,12 +20,15 @@ import websocket from '@fastify/websocket';
 import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
 import { firebaseAdmin } from './config/firebase.js';
-import { pool, ensureMakerColumns, ensureBuildColumns, ensureDiscussionColumns, ensurePublishTables, ensureReviewTables, ensureWaitlistTable, ensureShowcaseColumns, ensureSearchColumns } from './db/pool.js';
+import { pool, ensureMakerColumns, ensureBuildColumns, ensureDiscussionColumns, ensurePublishTables, ensureReviewTables, ensureWaitlistTable, ensureShowcaseColumns, ensureSearchColumns, ensureSocialTables } from './db/pool.js';
 import { makerRoutes } from './routes/makers.js';
 import { publicationRoutes } from './routes/publications.js';
 import { waitlistRoutes } from './routes/waitlist.js';
 import { registerMetaRoutes } from './routes/meta.js';
 import { searchRoutes } from './routes/search.js';
+import { messageRoutes } from './routes/messages.js';
+import { notificationRoutes } from './routes/notifications.js';
+import { followRoutes } from './routes/follows.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -106,6 +109,9 @@ await ensureShowcaseColumns().catch((err) => {
 await ensureSearchColumns().catch((err) => {
   app.log.warn({ err }, 'ensureSearchColumns failed');
 });
+await ensureSocialTables().catch((err) => {
+  app.log.warn({ err }, 'ensureSocialTables failed');
+});
 
 await app.register(authRoutes, { prefix: '/auth' });
 await app.register(waitlistRoutes, { prefix: '/waitlist' });
@@ -115,6 +121,9 @@ await app.register(sessionRoutes, { prefix: '/sessions' });
 await app.register(ideaRoutes, { prefix: '/ideas' });
 await app.register(publicationRoutes, { prefix: '/publications' });
 await app.register(searchRoutes, { prefix: '/search' });
+await app.register(messageRoutes, { prefix: '/messages' });
+await app.register(notificationRoutes, { prefix: '/notifications' });
+await app.register(followRoutes, { prefix: '/follows' });
 await app.register(trendingRoutes, { prefix: '/trending' });
 await app.register(settingsRoutes, { prefix: '/settings' });
 await app.register(wsRoutes, { prefix: '/ws' });
@@ -136,6 +145,8 @@ if (existsSync(webDist)) {
         request.url.startsWith('/sessions') || request.url.startsWith('/ideas') ||
         request.url.startsWith('/trending') || request.url.startsWith('/settings') ||
         request.url.startsWith('/publications') || request.url.startsWith('/search') ||
+        request.url.startsWith('/messages') || request.url.startsWith('/notifications') ||
+        request.url.startsWith('/follows') ||
         request.url.startsWith('/ws') || request.url.startsWith('/pulls') ||
         request.url.startsWith('/proxy') || request.url.startsWith('/health')) {
       reply.status(404).send({ error: 'Not found' });
