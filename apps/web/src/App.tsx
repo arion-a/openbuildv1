@@ -15,6 +15,7 @@ import { Maker } from './pages/Maker';
 import { Makers } from './pages/Makers';
 import { Publish } from './pages/Publish';
 import { Landing } from './pages/Landing';
+import { Search } from './pages/Search';
 import { useAuth } from './hooks/useAuth';
 
 function Home() {
@@ -43,6 +44,7 @@ export default function App() {
           <Route path="/buildlive/:id/pulls" element={isLoggedIn() ? <ProjectPulls /> : <Navigate to="/auth" />} />
           <Route path="/ideastream" element={<IdeaStream />} />
           <Route path="/ideastream/:id" element={<IdeaDetail />} />
+          <Route path="/search" element={<Search />} />
           <Route path="/u/:handle" element={<Maker />} />
           <Route path="/makers" element={<Makers />} />
           <Route path="/publish" element={<Publish />} />

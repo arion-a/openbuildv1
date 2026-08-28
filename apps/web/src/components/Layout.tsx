@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LogOut, Settings, UserRound, Shield, Mail } from 'lucide-react';
+import { LogOut, Settings, UserRound, Shield, Mail, Search } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { Avatar } from './Avatar';
 
@@ -83,6 +83,31 @@ function AccountMenu() {
   );
 }
 
+function HeaderSearch() {
+  const navigate = useNavigate();
+  const [q, setQ] = useState('');
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (q.trim()) navigate(`/search?q=${encodeURIComponent(q.trim())}`);
+      }}
+      className="hidden sm:block flex-1 max-w-xs mx-auto"
+    >
+      <div className="relative">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search"
+          aria-label="Search"
+          className="w-full h-8 pl-8 pr-3 rounded-full bg-[#100e0c] border border-[var(--line)] text-sm text-[var(--cream)] outline-none focus:border-[var(--ember)]/60 placeholder:text-[#6f675c]"
+        />
+      </div>
+    </form>
+  );
+}
+
 export function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -119,8 +144,8 @@ export function Layout() {
             Builders
           </Link>
         </nav>
-        <div className="flex-1" />
-        {import.meta.env.DEV && <p className="hidden sm:block text-[10px] text-[var(--muted)]">local</p>}
+        <HeaderSearch />
+        {import.meta.env.DEV && <p className="hidden md:block text-[10px] text-[var(--muted)]">local</p>}
         <button onClick={goPublish} className="btn-ember px-3 md:px-4 py-1.5 text-xs md:text-sm">
           Publish
         </button>
