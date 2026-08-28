@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { pool } from '../db/pool.js';
 import { llmService } from '../services/llm.service.js';
 import { firebaseAdmin } from '../config/firebase.js';
+import { createLive, PublishError } from '../services/publish.service.js';
 
 async function extractUserId(app: FastifyInstance, request: any): Promise<string | null> {
   const authHeader = request.headers.authorization;
@@ -31,7 +32,7 @@ export async function ideaRoutes(app: FastifyInstance) {
     const limit = Math.min(Math.max(parseInt(rawLimit) || 20, 1), 100);
     const offset = Math.max(parseInt(rawOffset) || 0, 0);
     let query = `
-      SELECT i.*, COALESCE(u.display_name, u.username) as author, u.avatar_url as author_avatar_url,
+      SELECT i.*, COALESCE(NULLIF(TRIM(u.display_name), ''), u.username) as author, u.username as author_username, u.avatar_url as author_avatar_url,
         (SELECT COUNT(*) FROM idea_threads WHERE idea_id = i.id) as thread_count
       FROM ideas i
       JOIN users u ON i.author_id = u.id
@@ -55,35 +56,15 @@ export async function ideaRoutes(app: FastifyInstance) {
     const res = await pool.query(query, params);
     const ideas = res.rows;
 
-    if (ideas.length > 0) {
+    if (currentUserId && ideas.length > 0) {
       const ideaIds = ideas.map((i: any) => i.id);
-      const collabRes = await pool.query(
-        `SELECT DISTINCT ON (t.idea_id, t.author_id)
-           t.idea_id, COALESCE(u.display_name, u.username) as username, u.avatar_url
-         FROM idea_threads t
-         JOIN users u ON t.author_id = u.id
-         WHERE t.idea_id = ANY($1)
-         ORDER BY t.idea_id, t.author_id, t.created_at ASC`,
-        [ideaIds]
+      const upvoteRes = await pool.query(
+        'SELECT idea_id FROM idea_upvotes WHERE user_id = $1 AND idea_id = ANY($2)',
+        [currentUserId, ideaIds]
       );
-      const collabMap: Record<string, { username: string; avatar_url: string | null }[]> = {};
-      for (const row of collabRes.rows) {
-        if (!collabMap[row.idea_id]) collabMap[row.idea_id] = [];
-        collabMap[row.idea_id].push({ username: row.username, avatar_url: row.avatar_url });
-      }
+      const upvotedSet = new Set(upvoteRes.rows.map((r: any) => r.idea_id));
       for (const idea of ideas) {
-        (idea as any).collaborators = collabMap[idea.id] || [];
-      }
-
-      if (currentUserId) {
-        const upvoteRes = await pool.query(
-          'SELECT idea_id FROM idea_upvotes WHERE user_id = $1 AND idea_id = ANY($2)',
-          [currentUserId, ideaIds]
-        );
-        const upvotedSet = new Set(upvoteRes.rows.map((r: any) => r.idea_id));
-        for (const idea of ideas) {
-          (idea as any).upvoted = upvotedSet.has(idea.id);
-        }
+        (idea as any).upvoted = upvotedSet.has(idea.id);
       }
     }
 
@@ -93,31 +74,61 @@ export async function ideaRoutes(app: FastifyInstance) {
   // Post idea
   app.post('/', { preHandler: [(app as any).authenticate] }, async (request, reply) => {
     const { id: userId } = (request as any).user;
-    const { title, body, domain, tags } = request.body as any;
+    const body = request.body as any;
+    try {
+      const { idea } = await createLive(userId, {
+        kind: 'idea',
+        title: body.title,
+        body: body.body,
+        domain: body.domain,
+      });
+      return idea;
+    } catch (err) {
+      if (err instanceof PublishError) {
+        return reply.status(err.statusCode).send({ error: err.message, message: err.message });
+      }
+      throw err;
+    }
+  });
 
-    if (!title || typeof title !== 'string' || title.length > 300) {
-      return reply.status(400).send({ error: 'Title is required and must be under 300 characters' });
+  app.get('/:id', async (request, reply) => {
+    const { id } = request.params as any;
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      return reply.status(404).send({ error: 'Not found' });
     }
-    if (!body || typeof body !== 'string' || body.length > 50000) {
-      return reply.status(400).send({ error: 'Body is required and must be under 50000 characters' });
-    }
-    if (tags && (!Array.isArray(tags) || tags.length > 20 || tags.some((t: any) => typeof t !== 'string' || t.length > 50))) {
-      return reply.status(400).send({ error: 'Tags must be an array of up to 20 strings (max 50 chars each)' });
-    }
-
+    const currentUserId = await extractUserId(app, request);
     const res = await pool.query(
-      `INSERT INTO ideas (author_id, title, body, domain, tags)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [userId, title, body, domain || null, tags || []]
+      `SELECT i.*, COALESCE(NULLIF(TRIM(u.display_name), ''), u.username) as author, u.username as author_username,
+              u.avatar_url as author_avatar_url,
+              p.id as linked_build_id, p.title as linked_build_title
+       FROM ideas i
+       JOIN users u ON i.author_id = u.id
+       LEFT JOIN projects p ON p.id = i.build_id
+       WHERE i.id = $1`,
+      [id]
     );
-    return res.rows[0];
+    if (!res.rows[0]) return reply.status(404).send({ error: 'Not found' });
+    const idea = res.rows[0];
+    if (currentUserId) {
+      const v = await pool.query(
+        'SELECT 1 FROM idea_upvotes WHERE idea_id = $1 AND user_id = $2',
+        [id, currentUserId]
+      );
+      idea.upvoted = v.rows.length > 0;
+    }
+    idea.build = idea.linked_build_id
+      ? { id: idea.linked_build_id, title: idea.linked_build_title }
+      : null;
+    delete idea.linked_build_id;
+    delete idea.linked_build_title;
+    return idea;
   });
 
   // Discussion threads (Ask)
   app.get('/:id/threads', async (request) => {
     const { id } = request.params as any;
     const res = await pool.query(
-      `SELECT t.*, COALESCE(u.display_name, u.username) as username, u.avatar_url FROM idea_threads t
+      `SELECT t.*, COALESCE(NULLIF(TRIM(u.display_name), ''), u.username) as username, u.username as handle, u.avatar_url FROM idea_threads t
        JOIN users u ON t.author_id = u.id
        WHERE t.idea_id = $1
        ORDER BY t.created_at ASC`,
@@ -144,7 +155,7 @@ export async function ideaRoutes(app: FastifyInstance) {
     const thread = res.rows[0];
     const userRes = await pool.query('SELECT display_name, username, avatar_url FROM users WHERE id = $1', [userId]);
     const u = userRes.rows[0];
-    return { ...thread, username: u?.display_name || u?.username, avatar_url: u?.avatar_url };
+    return { ...thread, username: (u?.display_name && String(u.display_name).trim()) || u?.username, handle: u?.username, avatar_url: u?.avatar_url };
   });
 
   // Upvote (toggle)

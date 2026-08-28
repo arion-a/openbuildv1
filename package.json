@@ -1,15 +1,21 @@
 {
   "name": "openbuild",
   "private": true,
-  "workspaces": ["apps/*"],
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
-    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
+    "dev": "concurrently -k -n api,web -c blue,green \"npm run dev:api\" \"npm run dev:web:after-api\"",
     "dev:api": "cd apps/api && npm run dev",
     "dev:web": "cd apps/web && npm run dev",
+    "dev:web:after-api": "node scripts/wait-for-api.mjs && npm run dev:web",
     "build": "npm run build --workspaces",
     "infra": "cd apps/api && docker compose up -d"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"
+  },
+  "dependencies": {
+    "firebase": "^12.18.0"
   }
 }

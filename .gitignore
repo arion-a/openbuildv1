@@ -22,6 +22,8 @@ BuildStream feature.make
 .DS_Store
 Thumbs.db
 
-# IDE
-.vscode/
+firebase-debug.log
+firebase-debug.*.log
+ui-debug.log
 .idea/
+apps/api/firebase-adminsdk.json

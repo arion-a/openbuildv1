@@ -48,7 +48,7 @@ export async function pullRoutes(app: FastifyInstance) {
       head: pr.head?.label,
       base: pr.base?.label,
       mergeable: pr.mergeable,
-      html_url: pr.html_url?.replace('http://localhost:3000', 'https://git.openbuild.world') || `https://git.openbuild.world/${owner}/${repo}/pulls/${pr.number}`,
+      html_url: pr.html_url || `${config.gitea.url.replace(/\/$/, '')}/${owner}/${repo}/pulls/${pr.number}`,
     }));
   });
 

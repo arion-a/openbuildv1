@@ -51,3 +51,7 @@ export const config = {
     apiKey: process.env.ANTHROPIC_API_KEY!,
   },
 };
+
+export function giteaWebBase(): string {
+  return (config.gitea.url || '').replace(/\/$/, '');
+}
