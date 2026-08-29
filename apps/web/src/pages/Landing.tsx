@@ -40,7 +40,7 @@ export function Landing() {
 
       <div className="relative z-[1] min-h-screen flex flex-col items-center justify-center text-center px-6 py-16">
         <p className="text-sm text-[var(--muted)] mb-2.5">
-          A unified home for everything you build with AI
+          The discovery layer for AI builders
         </p>
         <p className="label-kicker mb-7">Opening soon</p>
 
