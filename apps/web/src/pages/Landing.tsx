@@ -2,6 +2,13 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 
+// The landing uses Manrope (not the Syne display face) for a smoother, calmer read.
+const headline: React.CSSProperties = {
+  fontFamily: '"Manrope", system-ui, sans-serif',
+  fontWeight: 800,
+  letterSpacing: '-0.02em',
+};
+
 export function Landing() {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'saving' | 'done' | 'error'>('idle');
@@ -31,16 +38,26 @@ export function Landing() {
         Open<span className="text-[var(--ember)]">Build</span>
       </Link>
 
-      <div className="relative z-[1] min-h-screen flex flex-col items-center justify-center text-center px-6">
+      <div className="relative z-[1] min-h-screen flex flex-col items-center justify-center text-center px-6 py-16">
         <p className="label-kicker mb-6">Opening soon</p>
 
-        <h1 className="font-display text-[2.6rem] sm:text-5xl md:text-[3.75rem] leading-[1] [text-wrap:balance] max-w-[16ch]">
+        <h1
+          style={headline}
+          className="text-[2.4rem] sm:text-5xl md:text-[3.5rem] leading-[1.06] [text-wrap:balance] max-w-[18ch]"
+        >
           A home for the app you built.
         </h1>
 
-        <p className="mt-5 text-[var(--cream)]/70 text-base md:text-lg leading-relaxed max-w-[34ch]">
-          Where people find it, try it, and tell you what they think.
-        </p>
+        <div className="mt-6 space-y-3 text-[var(--cream)]/75 text-base md:text-[1.05rem] leading-relaxed max-w-[46ch]">
+          <p>
+            You’re shipping AI prototypes and products faster than ever — and most of them
+            disappear into a group chat.
+          </p>
+          <p>
+            OpenBuild gives each one a real page: people find it, try it, leave a review, and
+            message you when they want more.
+          </p>
+        </div>
 
         <div className="mt-10 w-full max-w-sm">
           {status === 'done' ? (
@@ -78,10 +95,7 @@ export function Landing() {
             Create your account
           </Link>
           <span aria-hidden>·</span>
-          <Link
-            to="/auth?mode=signin&next=/buildlive"
-            className="hover:text-[var(--cream)]"
-          >
+          <Link to="/auth?mode=signin&next=/buildlive" className="hover:text-[var(--cream)]">
             Sign in
           </Link>
         </div>
