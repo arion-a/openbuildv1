@@ -33,6 +33,27 @@ function cleanHandle(raw?: string | null): string | null {
   return v.length >= 2 ? v : null;
 }
 
+const RESERVED = new Set([
+  'admin', 'api', 'auth', 'openbuild', 'settings', 'account', 'login', 'signup',
+  'signin', 'help', 'support', 'about', 'privacy', 'terms', 'u', 'me', 'new',
+  'discover', 'buildlive', 'ideastream', 'makers', 'publish', 'messages',
+  'notifications', 'welcome', 'search',
+]);
+
+/** Loose handle normaliser — lowercases and drops anything that isn't [a-z0-9_-]. */
+function normalizeHandle(raw: unknown): string {
+  return String(raw ?? '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 30);
+}
+
+/** null = ok, string = why it's not. Does not check the DB. */
+function handleProblem(h: string): string | null {
+  if (h.length < 2) return 'Pick at least 2 characters.';
+  if (h.length > 30) return 'Keep it under 30 characters.';
+  if (!/^[a-z0-9_-]+$/.test(h)) return 'Letters, numbers, _ and - only.';
+  if (RESERVED.has(h)) return 'That one’s reserved — try another.';
+  return null;
+}
+
 function cleanHttpUrl(raw?: string | null): string | null {
   if (!raw || typeof raw !== 'string') return null;
   const trimmed = raw.trim();
@@ -272,6 +293,19 @@ export async function authRoutes(app: FastifyInstance) {
     return { token: jwtToken, user };
   });
 
+  app.get('/username-available', { preHandler: [(app as any).authenticate] }, async (request) => {
+    const { id } = (request as any).user;
+    const normalized = normalizeHandle((request.query as any)?.u);
+    const problem = handleProblem(normalized);
+    if (problem) return { normalized, available: false, reason: problem };
+    const taken = await pool.query('SELECT 1 FROM users WHERE username = $1 AND id <> $2', [normalized, id]);
+    return {
+      normalized,
+      available: taken.rows.length === 0,
+      reason: taken.rows.length === 0 ? null : 'That username is taken.',
+    };
+  });
+
   app.get('/me', { preHandler: [(app as any).authenticate] }, async (request) => {
     const { id } = (request as any).user;
     const res = await pool.query(
@@ -304,11 +338,17 @@ export async function authRoutes(app: FastifyInstance) {
     const { avatar_url, bio, username, display_name, github_url, lovable_url, replit_url, bolt_url } = request.body as any;
 
     let sanitizedUsername = null;
-    if (username) {
-      sanitizedUsername = username.replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
-      if (sanitizedUsername.length < 2) {
+    if (username !== undefined && username !== null && username !== '') {
+      sanitizedUsername = normalizeHandle(username);
+      const problem = handleProblem(sanitizedUsername);
+      if (problem) {
         reply.code(400);
-        return { error: 'Username must be at least 2 characters (letters, numbers, _ and - only)' };
+        return { error: problem, message: problem };
+      }
+      const taken = await pool.query('SELECT 1 FROM users WHERE username = $1 AND id <> $2', [sanitizedUsername, id]);
+      if (taken.rows.length > 0) {
+        reply.code(409);
+        return { error: 'That username is taken.', message: 'That username is taken.' };
       }
     }
 

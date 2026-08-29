@@ -4,6 +4,7 @@ import { ArrowUpRight, Copy, Check, ExternalLink, Mail, MessageSquare, Star, Ham
 import { api } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { Avatar } from '../components/Avatar';
+import { ShareMenu } from '../components/ShareMenu';
 import { swatchGradient } from '../lib/swatch';
 
 interface MakerBuild {
@@ -229,6 +230,13 @@ export function Maker() {
               ))}
             </div>
           )}
+        </div>
+        <div className="shrink-0">
+          <ShareMenu
+            url={`${window.location.origin}/u/${maker.username}`}
+            title={maker.display_name || maker.username}
+            summary={maker.bio || `${maker.display_name || maker.username} builds with AI on OpenBuild.`}
+          />
         </div>
       </div>
 

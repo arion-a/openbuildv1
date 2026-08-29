@@ -68,6 +68,7 @@ export const api = {
   localAuth: (data: { email: string; password: string; display_name?: string; mode: 'signin' | 'signup' }) =>
     request('/auth/local', { method: 'POST', body: JSON.stringify(data) }),
   me: () => request('/auth/me'),
+  checkUsername: (u: string) => request(`/auth/username-available?u=${encodeURIComponent(u)}`),
   updateProfile: (data: {
     avatar_url?: string;
     bio?: string;
