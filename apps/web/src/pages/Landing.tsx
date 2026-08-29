@@ -50,12 +50,12 @@ export function Landing() {
 
         <div className="mt-6 space-y-3 text-[var(--cream)]/75 text-base md:text-[1.05rem] leading-relaxed max-w-[46ch]">
           <p>
-            Millions of AI prototypes and products ship every month — and most of them vanish
-            into a group chat.
+            Millions of AI prototypes and products ship every month. Most of them live scattered
+            across dead links, or vanish into a group chat, a Twitter thread.
           </p>
           <p>
-            OpenBuild gives yours a real page: one people can find, try, review, and reach you
-            through.
+            OpenBuild gives your builds a real page: one people can find, try, review, and reach
+            you through.
           </p>
         </div>
 
