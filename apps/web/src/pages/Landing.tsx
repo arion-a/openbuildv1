@@ -43,19 +43,19 @@ export function Landing() {
 
         <h1
           style={headline}
-          className="text-[2.4rem] sm:text-5xl md:text-[3.5rem] leading-[1.08] [text-wrap:balance] max-w-[18ch]"
+          className="text-[2.4rem] sm:text-5xl md:text-[3.5rem] leading-[1.08] [text-wrap:balance] max-w-[20ch]"
         >
-          You built it. Put your name on it.
+          You built it. Now how do people find it?
         </h1>
 
         <div className="mt-6 space-y-3 text-[var(--cream)]/75 text-base md:text-[1.05rem] leading-relaxed max-w-[46ch]">
           <p>
-            The thing you shipped last weekend is real work — not a throwaway. Right now it’s a
-            dead link in someone’s DMs.
+            Millions of AI prototypes and products ship every month — and most of them vanish
+            into a group chat.
           </p>
           <p>
-            OpenBuild gives you a page of your own: your builds, your name, your reputation.
-            People find them, try them, and tell you what they think.
+            OpenBuild gives yours a real page: one people can find, try, review, and reach you
+            through.
           </p>
         </div>
 
