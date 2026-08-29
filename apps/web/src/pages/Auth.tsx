@@ -38,15 +38,20 @@ function safeNext(raw: string | null): string | null {
   return raw;
 }
 
+function initialMode(param: string | null): Mode {
+  if (param === 'signup' || param === 'signin' || param === 'choose') return param;
+  return import.meta.env.DEV ? 'signup' : 'choose';
+}
+
 export function Auth() {
-  const [mode, setMode] = useState<Mode>(import.meta.env.DEV ? 'signup' : 'choose');
+  const [searchParams] = useSearchParams();
+  const [mode, setMode] = useState<Mode>(initialMode(searchParams.get('mode')));
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { isLoggedIn, user, setUser } = useAuth();
 
   const afterLogin = (handle: string, isNew = false) => {
