@@ -43,19 +43,19 @@ export function Landing() {
 
         <h1
           style={headline}
-          className="text-[2.4rem] sm:text-5xl md:text-[3.5rem] leading-[1.08] [text-wrap:balance] max-w-[20ch]"
+          className="text-[2.4rem] sm:text-5xl md:text-[3.5rem] leading-[1.08] [text-wrap:balance] max-w-[18ch]"
         >
-          You keep building. Where does it live?
+          You built it. Put your name on it.
         </h1>
 
         <div className="mt-6 space-y-3 text-[var(--cream)]/75 text-base md:text-[1.05rem] leading-relaxed max-w-[46ch]">
           <p>
-            Prototypes, side projects, the thing you shipped last weekend — scattered across dead
-            links and old group chats.
+            The thing you shipped last weekend is real work — not a throwaway. Right now it’s a
+            dead link in someone’s DMs.
           </p>
           <p>
-            OpenBuild gives you a page that’s yours: every build in one place, with stars,
-            reviews, and people who follow your work.
+            OpenBuild gives you a page of your own: your builds, your name, your reputation.
+            People find them, try them, and tell you what they think.
           </p>
         </div>
 
