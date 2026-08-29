@@ -39,7 +39,10 @@ export function Landing() {
       </Link>
 
       <div className="relative z-[1] min-h-screen flex flex-col items-center justify-center text-center px-6 py-16">
-        <p className="label-kicker mb-6">Opening soon</p>
+        <p className="text-sm text-[var(--muted)] mb-2.5">
+          A unified home for everything you build with AI
+        </p>
+        <p className="label-kicker mb-7">Opening soon</p>
 
         <h1
           style={headline}
@@ -48,13 +51,13 @@ export function Landing() {
           You built it. Now how do people find it?
         </h1>
 
-        <div className="mt-6 space-y-3 text-[var(--cream)]/75 text-base md:text-[1.05rem] leading-relaxed max-w-[46ch]">
+        <div className="mt-7 space-y-4 text-[var(--cream)]/75 text-base md:text-[1.05rem] leading-[1.75] max-w-[52ch]">
           <p>
             Millions of AI prototypes and products ship every month. Most of them live scattered
             across dead links, or vanish into a group chat, a Twitter thread.
           </p>
           <p>
-            OpenBuild gives your builds a real page: one people can find, try, review, and reach
+            OpenBuild gives your builds a real page — one people can find, try, review, and reach
             you through.
           </p>
         </div>
@@ -92,7 +95,7 @@ export function Landing() {
             to="/auth?mode=signup"
             className="text-[var(--cream)] underline underline-offset-4 hover:text-[var(--ember)]"
           >
-            Claim your page
+            Create your page
           </Link>
           <span aria-hidden>·</span>
           <Link to="/auth?mode=signin&next=/buildlive" className="hover:text-[var(--cream)]">
