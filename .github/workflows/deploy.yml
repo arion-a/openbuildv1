@@ -23,8 +23,11 @@ jobs:
             # Stop API before updating
             sudo systemctl stop openbuild-api
 
-            # Pull latest
-            git pull origin main
+            # Force the tree to exactly match origin/main and drop orphan files
+            # (a plain `git pull` leaves stale files behind — e.g. renamed modules).
+            git fetch origin
+            git reset --hard origin/main
+            git clean -fd
 
             # Install all workspace deps from root
             npm ci
