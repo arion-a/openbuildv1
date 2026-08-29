@@ -39,9 +39,6 @@ export function Landing() {
       </Link>
 
       <div className="relative z-[1] min-h-screen flex flex-col items-center justify-center text-center px-6 py-16">
-        <p className="text-sm text-[var(--muted)] mb-2.5">
-          The unified interface for AI-built products
-        </p>
         <p className="label-kicker mb-7">Opening soon</p>
 
         <h1
