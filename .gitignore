@@ -7,6 +7,19 @@ dist/
 *-firebase-adminsdk-*.json
 open-build-prod-*.json
 
+# Local env overrides (Vite)
+*.local
+.env.local
+
+# TypeScript incremental build cache  (tsc -b writes these)
+*.tsbuildinfo
+
+# Claude Code machine-local settings
+.claude/settings.local.json
+
+# generic logs
+*.log
+
 # Export/design files
 figma-export/
 
