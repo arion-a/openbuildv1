@@ -40,7 +40,7 @@ export function Landing() {
 
       <div className="relative z-[1] min-h-screen flex flex-col items-center justify-center text-center px-6 py-16">
         <p className="text-sm text-[var(--muted)] mb-2.5">
-          The discovery layer for AI builders
+          The unified interface for AI-built products
         </p>
         <p className="label-kicker mb-7">Opening soon</p>
 
@@ -53,8 +53,8 @@ export function Landing() {
 
         <div className="mt-7 space-y-4 text-[var(--cream)]/75 text-base md:text-[1.05rem] leading-[1.75] max-w-[52ch]">
           <p>
-            Millions of AI prototypes and products ship every month. Most of them live scattered
-            across dead links, or vanish into a group chat, a Twitter thread.
+            Millions of AI products ship every month. Most of them live scattered across dead
+            links, or vanish into a group chat, a Twitter thread.
           </p>
           <p>
             OpenBuild gives your builds a real page — one people can find, try, review, and reach
