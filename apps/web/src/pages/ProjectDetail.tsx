@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ExternalLink, Pencil, Save, X, Star, Send, GitFork, ImagePlus, Loader2, Mail } from 'lucide-react';
+import { ExternalLink, Pencil, Save, X, Star, Send, GitFork, ImagePlus, Loader2, Mail, Download } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { Avatar } from '../components/Avatar';
 import { MakerLink } from '../components/MakerLink';
 import { Gallery } from '../components/Gallery';
 import { RichText } from '../components/RichText';
+import { ShareMenu } from '../components/ShareMenu';
 import { imageUploadEnabled, uploadImages } from '../lib/uploadImage';
 
 export function ProjectDetail() {
@@ -204,19 +205,27 @@ export function ProjectDetail() {
             )}
           </div>
         </div>
-        {isOwner && !editing && (
-          <button onClick={startEdit} className="btn-ghost inline-flex items-center gap-1.5 px-4 py-2 text-sm">
-            <Pencil size={14} /> Edit
-          </button>
-        )}
-        {editing && (
-          <div className="flex gap-2">
+        {editing ? (
+          <div className="flex gap-2 shrink-0">
             <button onClick={handleSave} disabled={saving} className="btn-ember inline-flex items-center gap-1.5 px-4 py-2 text-sm disabled:opacity-50">
               <Save size={14} /> {saving ? 'Saving...' : 'Save'}
             </button>
             <button onClick={() => setEditing(false)} className="btn-ghost inline-flex items-center gap-1.5 px-4 py-2 text-sm">
               <X size={14} /> Cancel
             </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 shrink-0">
+            <ShareMenu
+              url={`${window.location.origin}/buildlive/${project.id}`}
+              title={project.title}
+              summary={project.tagline || undefined}
+            />
+            {isOwner && (
+              <button onClick={startEdit} className="btn-ghost inline-flex items-center gap-1.5 px-4 py-2 text-sm">
+                <Pencil size={14} /> Edit
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -353,6 +362,15 @@ export function ProjectDetail() {
               >
                 <Mail size={14} /> Message
               </button>
+            )}
+            {project.git_url && (
+              <a
+                href={`${String(project.git_url).replace(/\/$/, '')}/archive/main.zip`}
+                className="btn-ghost inline-flex items-center gap-2 px-4 py-2 text-sm"
+                title="Download the working product as a zip"
+              >
+                <Download size={14} /> Download
+              </a>
             )}
           </div>
 
