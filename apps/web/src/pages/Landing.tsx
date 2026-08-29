@@ -43,19 +43,19 @@ export function Landing() {
 
         <h1
           style={headline}
-          className="text-[2.4rem] sm:text-5xl md:text-[3.5rem] leading-[1.06] [text-wrap:balance] max-w-[18ch]"
+          className="text-[2.4rem] sm:text-5xl md:text-[3.5rem] leading-[1.08] [text-wrap:balance] max-w-[20ch]"
         >
-          A home for the app you built.
+          You built it. Now how do people find it?
         </h1>
 
         <div className="mt-6 space-y-3 text-[var(--cream)]/75 text-base md:text-[1.05rem] leading-relaxed max-w-[46ch]">
           <p>
-            You’re shipping AI prototypes and products faster than ever — and most of them
-            disappear into a group chat.
+            Millions of AI prototypes and products ship every month — and most of them vanish
+            into a group chat.
           </p>
           <p>
-            OpenBuild gives each one a real page: people find it, try it, leave a review, and
-            message you when they want more.
+            OpenBuild gives yours a real page: one people can find, try, review, and reach you
+            through.
           </p>
         </div>
 
