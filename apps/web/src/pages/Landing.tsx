@@ -45,17 +45,17 @@ export function Landing() {
           style={headline}
           className="text-[2.4rem] sm:text-5xl md:text-[3.5rem] leading-[1.08] [text-wrap:balance] max-w-[20ch]"
         >
-          You built it. Now how do people find it?
+          You keep building. Where does it live?
         </h1>
 
         <div className="mt-6 space-y-3 text-[var(--cream)]/75 text-base md:text-[1.05rem] leading-relaxed max-w-[46ch]">
           <p>
-            Millions of AI prototypes and products ship every month — and most of them vanish
-            into a group chat.
+            Prototypes, side projects, the thing you shipped last weekend — scattered across dead
+            links and old group chats.
           </p>
           <p>
-            OpenBuild gives yours a real page: one people can find, try, review, and reach you
-            through.
+            OpenBuild gives you a page that’s yours: every build in one place, with stars,
+            reviews, and people who follow your work.
           </p>
         </div>
 
@@ -92,7 +92,7 @@ export function Landing() {
             to="/auth?mode=signup"
             className="text-[var(--cream)] underline underline-offset-4 hover:text-[var(--ember)]"
           >
-            Create your account
+            Claim your page
           </Link>
           <span aria-hidden>·</span>
           <Link to="/auth?mode=signin&next=/buildlive" className="hover:text-[var(--cream)]">
