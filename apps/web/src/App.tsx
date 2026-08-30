@@ -22,8 +22,8 @@ import { Welcome } from './pages/Welcome';
 import { useAuth } from './hooks/useAuth';
 
 function Home() {
-  const { isLoggedIn } = useAuth();
-  if (isLoggedIn()) return <Navigate to="/buildlive" replace />;
+  // Pre-launch: the landing page is always the landing page. It stays put until
+  // the visitor clicks through — no auto-redirect, even for a logged-in session.
   return <Landing />;
 }
 
