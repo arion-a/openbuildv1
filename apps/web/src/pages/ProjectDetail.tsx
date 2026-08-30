@@ -187,10 +187,10 @@ export function ProjectDetail() {
             <input
               value={editForm.title}
               onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-              className="ob-input font-display text-2xl"
+              className="ob-input title-plain text-2xl"
             />
           ) : (
-            <h1 className="font-display text-4xl md:text-5xl leading-tight">{project.title}</h1>
+            <h1 className="title-plain text-3xl md:text-4xl">{project.title}</h1>
           )}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3 text-sm text-[var(--muted)]">
             <MakerLink username={project.owner_username} className="inline-flex items-center gap-2 hover:text-[var(--cream)]">

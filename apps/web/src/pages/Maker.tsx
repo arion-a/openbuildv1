@@ -331,7 +331,7 @@ export function Maker() {
                 <Link to={`/buildlive/${b.id}`} className="block">
                   <div className="h-24" style={{ background: swatchGradient(b.title) }} />
                   <div className="p-5">
-                    <p className="font-display text-2xl leading-tight">{b.title}</p>
+                    <p className="title-plain text-xl">{b.title}</p>
                     {b.tagline && <p className="text-sm text-[var(--muted)] mt-2 line-clamp-2">{b.tagline}</p>}
                     <div className="flex flex-wrap items-center gap-3 mt-4 text-xs font-semibold text-[var(--muted)]">
                       <span className="inline-flex items-center gap-1"><Star size={12} /> {b.upvotes || 0}</span>
@@ -365,7 +365,7 @@ export function Maker() {
             {maker.ideas.map((idea) => (
               <li key={idea.id}>
                 <Link to={`/ideastream/${idea.id}`} className="ob-card block p-5">
-                  <p className="font-display text-xl leading-tight">{idea.title}</p>
+                  <p className="title-plain text-lg">{idea.title}</p>
                   {idea.body && <p className="text-sm text-[var(--muted)] mt-2 line-clamp-2">{idea.body}</p>}
                   <div className="flex flex-wrap items-center gap-3 mt-3 text-xs font-semibold text-[var(--muted)]">
                     <span className="inline-flex items-center gap-1"><Star size={12} /> {idea.upvotes || 0}</span>

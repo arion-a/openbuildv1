@@ -108,7 +108,7 @@ export function Discover() {
                         }
                       />
                       <div className="min-w-0">
-                        <p className="font-display text-xl leading-tight">{x.title}</p>
+                        <p className="title-plain text-lg">{x.title}</p>
                         {x.tagline && (
                           <p className="text-[0.95rem] leading-relaxed text-[var(--cream)]/75 line-clamp-2 mt-1">{x.tagline}</p>
                         )}
@@ -154,7 +154,7 @@ export function Discover() {
               <div className="space-y-4">
                 {i.map((x) => (
                   <Link key={x.id} to={`/ideastream/${x.id}`} className="ob-card block p-5">
-                    <p className="font-display text-xl leading-tight">{x.title}</p>
+                    <p className="title-plain text-lg">{x.title}</p>
                     {x.body && (
                       <p className="text-[0.95rem] leading-relaxed text-[var(--cream)]/75 line-clamp-2 mt-1.5">{x.body}</p>
                     )}

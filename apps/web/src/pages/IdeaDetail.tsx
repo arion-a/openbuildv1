@@ -123,7 +123,7 @@ export function IdeaDetail() {
             {idea.domain && <span className="ob-chip ml-2 align-middle">{idea.domain}</span>}
           </div>
         </div>
-        <h1 className="font-display text-3xl md:text-4xl">{idea.title}</h1>
+        <h1 className="title-plain text-2xl md:text-3xl">{idea.title}</h1>
         {idea.body && (
           <RichText text={idea.body} className="text-sm text-[var(--muted)] mt-3 leading-relaxed" />
         )}

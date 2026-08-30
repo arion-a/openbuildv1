@@ -187,7 +187,7 @@ export function BuildLive() {
                   )}
                   <div className="p-5 pb-3">
                     <div className="flex items-start justify-between gap-2">
-                      <h2 className="font-display text-2xl leading-tight">{project.title}</h2>
+                      <h2 className="title-plain text-xl md:text-2xl">{project.title}</h2>
                       {(project.review_count ?? 0) > 0 && (
                         <span className="shrink-0 text-xs font-semibold text-[var(--gold)] mt-1">
                           ★ {Number(project.avg_rating).toFixed(1)}

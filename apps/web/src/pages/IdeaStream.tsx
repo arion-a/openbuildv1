@@ -157,7 +157,7 @@ export function IdeaStream() {
               <Link to={`/ideastream/${idea.id}`} className="block">
                 <div className="flex gap-4">
                   <div className="min-w-0 flex-1">
-                    <h2 className="font-display text-2xl leading-tight hover:text-[var(--ember)] transition-colors">{idea.title}</h2>
+                    <h2 className="title-plain text-xl md:text-2xl hover:text-[var(--ember)] transition-colors">{idea.title}</h2>
                     {idea.body && <p className="text-[0.95rem] leading-relaxed text-[var(--cream)]/75 mt-2 line-clamp-3">{idea.body}</p>}
                   </div>
                   {idea.media && idea.media[0] && (

@@ -45,6 +45,16 @@ h1, h2, .font-display {
   letter-spacing: -0.045em;
 }
 
+/* Content titles — the actual names of builds and ideas. Syne is a wide display
+   face that's hard to scan at title length, so these use the body font at a
+   calmer weight, closer to how titles read on a normal site. */
+.title-plain {
+  font-family: "Manrope", system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
 input, textarea, button, a {
   font-family: inherit;
 }
