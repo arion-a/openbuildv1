@@ -16,16 +16,20 @@ const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 const credentialsFile = process.env.GOOGLE_APPLICATION_CREDENTIALS;
 
 if (serviceAccountJson) {
+  const cert = JSON.parse(serviceAccountJson);
+  console.log('[firebase] init via FIREBASE_SERVICE_ACCOUNT_JSON, project:', cert.project_id);
   admin.initializeApp({
-    credential: admin.credential.cert(JSON.parse(serviceAccountJson)),
+    credential: admin.credential.cert(cert),
   });
 } else if (credentialsFile) {
   const absPath = resolve(credentialsFile);
   const cert = JSON.parse(readFileSync(absPath, 'utf-8'));
+  console.log('[firebase] init via GOOGLE_APPLICATION_CREDENTIALS', absPath, 'project:', cert.project_id);
   admin.initializeApp({
     credential: admin.credential.cert(cert),
   });
 } else {
+  console.log('[firebase] init with projectId only:', process.env.FIREBASE_PROJECT_ID);
   admin.initializeApp({
     projectId: process.env.FIREBASE_PROJECT_ID,
   });
