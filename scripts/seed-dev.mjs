@@ -8,10 +8,25 @@
 // legacy @dev.local demo users). Real accounts are never touched.
 
 import pg from 'pg';
+import crypto from 'crypto';
 
 const API = process.env.API || 'http://127.0.0.1:41935';
 const DB = process.env.DATABASE_URL || 'postgres://openbuild:password@localhost:5432/openbuild';
+const JWT_SECRET = process.env.JWT_SECRET || '';
 const PASSWORD = 'Testpass1!';
+
+// HS256 JWT — accepted by the API's @fastify/jwt verifier. Used when /auth/local
+// is disabled (NODE_ENV=production), so the seed can still act as each user.
+function b64url(input) {
+  return Buffer.from(input).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function signJwt(payload) {
+  const header = b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const body = b64url(JSON.stringify({ ...payload, iat: Math.floor(Date.now() / 1000) }));
+  const data = `${header}.${body}`;
+  const sig = b64url(crypto.createHmac('sha256', JWT_SECRET).update(data).digest());
+  return `${data}.${sig}`;
+}
 const img = (seed) => `https://picsum.photos/seed/ob-${seed}/1280/860`;
 
 const pool = new pg.Pool({ connectionString: DB });
@@ -365,15 +380,48 @@ async function resetDemo() {
   console.log(`reset: removed ${ids.length} demo users and their content`);
 }
 
+async function uniqueUsername(name) {
+  const base =
+    name.toLowerCase().replace(/[^a-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 28) || 'builder';
+  let u = base;
+  let n = 1;
+  while ((await q('SELECT 1 FROM users WHERE username = $1', [u])).rows.length) u = `${base}${n++}`;
+  return u;
+}
+
+async function createUser(p) {
+  // Try the dev endpoint first; fall back to a direct insert when it's disabled.
+  try {
+    const r = await api('/auth/local', {
+      method: 'POST',
+      body: { email: p.email, password: PASSWORD, display_name: p.name, mode: 'signup' },
+    });
+    return r.token;
+  } catch (err) {
+    if (!String(err.message).includes('-> 403')) throw err;
+    if (!JWT_SECRET) {
+      console.error('\n/auth/local is disabled (NODE_ENV=production). Re-run with JWT_SECRET set:');
+      console.error('  export JWT_SECRET="$(grep -E \'^JWT_SECRET=\' /opt/openbuild/.env | cut -d= -f2-)"\n');
+      process.exit(1);
+    }
+    const username = await uniqueUsername(p.name);
+    const res = await q(
+      `INSERT INTO users (username, display_name, email, created_at)
+       VALUES ($1, $2, $3, NOW())
+       ON CONFLICT (email) DO UPDATE SET display_name = EXCLUDED.display_name
+       RETURNING id`,
+      [username, p.name, p.email]
+    );
+    return signJwt({ id: res.rows[0].id });
+  }
+}
+
 async function main() {
   await resetDemo();
 
   const tokens = {};
   for (const p of PEOPLE) {
-    const { token } = await api('/auth/local', {
-      method: 'POST',
-      body: { email: p.email, password: PASSWORD, display_name: p.name, mode: 'signup' },
-    });
+    const token = await createUser(p);
     tokens[p.email] = token;
     await api('/auth/profile', {
       method: 'PUT',
