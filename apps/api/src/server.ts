@@ -33,7 +33,19 @@ import { reportRoutes } from './routes/report.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const app = Fastify({ logger: true });
+const app = Fastify({
+  logger: true,
+  // In production the SPA and the API are one Fastify instance on one origin, and
+  // the browser calls /api/*. (Dev has a Vite proxy that strips the prefix.)
+  // Strip /api here — before routing — so /api/waitlist reaches the /waitlist route
+  // instead of falling through to index.html.
+  rewriteUrl(req) {
+    const url = req.url || '/';
+    if (url === '/api' || url === '/api/') return '/';
+    if (url.startsWith('/api/')) return url.slice(4);
+    return url;
+  },
+});
 
 await app.register(cors, {
   origin: (origin, cb) => {
