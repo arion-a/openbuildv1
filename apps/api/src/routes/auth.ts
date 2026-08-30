@@ -111,6 +111,7 @@ export async function authRoutes(app: FastifyInstance) {
     try {
       decoded = await firebaseAdmin.auth().verifyIdToken(idToken);
     } catch (err) {
+      request.log.error({ err: (err as Error)?.message }, 'verifyIdToken failed (/auth/firebase)');
       return reply.status(401).send({ message: 'Invalid Firebase token' });
     }
 

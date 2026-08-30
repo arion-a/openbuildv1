@@ -93,7 +93,8 @@ app.decorate('authenticate', async (request: any, reply: any) => {
       return reply.status(401).send({ error: 'User not provisioned' });
     }
     request.user = { id: res.rows[0].id, username: res.rows[0].username };
-  } catch {
+  } catch (err) {
+    request.log.error({ err: (err as Error)?.message }, 'verifyIdToken failed (authenticate)');
     return reply.status(401).send({ error: 'Unauthorized' });
   }
 });
