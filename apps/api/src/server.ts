@@ -20,7 +20,7 @@ import websocket from '@fastify/websocket';
 import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
 import { firebaseAdmin } from './config/firebase.js';
-import { pool, ensureMakerColumns, ensureBuildColumns, ensureDiscussionColumns, ensurePublishTables, ensureReviewTables, ensureWaitlistTable, ensureShowcaseColumns, ensureSearchColumns, ensureSocialTables, ensureModerationTables, ensureEmailOtpTable } from './db/pool.js';
+import { pool, ensureMakerColumns, ensureBuildColumns, ensureDiscussionColumns, ensurePublishTables, ensureReviewTables, ensureWaitlistTable, ensureShowcaseColumns, ensureSearchColumns, ensureSocialTables, ensureModerationTables, ensureEmailOtpTable, ensureContentLifecycleTables } from './db/pool.js';
 import { makerRoutes } from './routes/makers.js';
 import { publicationRoutes } from './routes/publications.js';
 import { waitlistRoutes } from './routes/waitlist.js';
@@ -121,6 +121,9 @@ await ensureModerationTables().catch((err) => {
 });
 await ensureEmailOtpTable().catch((err) => {
   app.log.warn({ err }, 'ensureEmailOtpTable failed');
+});
+await ensureContentLifecycleTables().catch((err) => {
+  app.log.warn({ err }, 'ensureContentLifecycleTables failed');
 });
 
 // Namespaced under /api so these never collide with SPA page routes of the

@@ -5,6 +5,7 @@ import { config, decrypt, giteaWebBase } from '../config/env.js';
 import { firebaseAdmin } from '../config/firebase.js';
 import { cleanHttpUrl, createLive, sanitizeMedia, PublishError } from '../services/publish.service.js';
 import { notify } from '../services/notify.js';
+import { getHistory, logDelete, logEdit } from '../services/audit.service.js';
 import { readFileSync, createWriteStream, mkdirSync, readdirSync, statSync } from 'fs';
 import { mkdtemp, rm } from 'fs/promises';
 import { tmpdir } from 'os';
@@ -78,7 +79,7 @@ export async function projectRoutes(app: FastifyInstance) {
         (SELECT COALESCE(AVG(rating), 0) FROM project_reviews WHERE project_id = p.id)::float as avg_rating
       FROM projects p
       JOIN users u ON p.owner_id = u.id
-      WHERE 1=1
+      WHERE p.deleted_at IS NULL
     `;
     const params: any[] = [];
     let paramIdx = 1;
@@ -133,7 +134,7 @@ export async function projectRoutes(app: FastifyInstance) {
     const { id } = request.params as any;
     const projectRes = await pool.query(
       `SELECT p.*, COALESCE(NULLIF(TRIM(u.display_name), ''), u.username) as owner_name, u.username as owner_username, u.avatar_url as owner_avatar_url FROM projects p
-       JOIN users u ON p.owner_id = u.id WHERE p.id = $1`,
+       JOIN users u ON p.owner_id = u.id WHERE p.id = $1 AND p.deleted_at IS NULL`,
       [id]
     );
     if (!projectRes.rows[0]) return { error: 'Not found' };
@@ -266,6 +267,9 @@ export async function projectRoutes(app: FastifyInstance) {
     const { id: userId } = (request as any).user;
     const { title, tagline, description, media, domain, tools_used, potential_applications, status, stage, live_url, how_to_replicate } = request.body as any;
 
+    const before = await pool.query('SELECT * FROM projects WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL', [id, userId]);
+    if (!before.rows[0]) return reply.status(403).send({ error: 'Not authorized' });
+
     const res = await pool.query(
       `UPDATE projects SET
         title = COALESCE($2, title),
@@ -298,16 +302,32 @@ export async function projectRoutes(app: FastifyInstance) {
       ]
     );
     if (!res.rows[0]) return reply.status(403).send({ error: 'Not authorized' });
+    await logEdit('project', id, userId, before.rows[0], res.rows[0]);
     return res.rows[0];
   });
 
+  // Soft delete (owner only) — keeps the row (and its audit trail) but hides
+  // it from every public listing/detail query.
   app.delete('/:id', { preHandler: [(app as any).authenticate] }, async (request, reply) => {
     const { id } = request.params as any;
     const { id: userId } = (request as any).user;
 
-    const res = await pool.query('DELETE FROM projects WHERE id = $1 AND owner_id = $2 RETURNING id', [id, userId]);
+    const res = await pool.query(
+      `UPDATE projects SET deleted_at = NOW() WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL RETURNING *`,
+      [id, userId]
+    );
     if (!res.rows[0]) return reply.status(403).send({ error: 'Not authorized' });
+    await logDelete('project', id, userId, res.rows[0]);
     return { deleted: true };
+  });
+
+  // Edit/delete history (owner only)
+  app.get('/:id/history', { preHandler: [(app as any).authenticate] }, async (request, reply) => {
+    const { id } = request.params as any;
+    const { id: userId } = (request as any).user;
+    const owns = await pool.query('SELECT 1 FROM projects WHERE id = $1 AND owner_id = $2', [id, userId]);
+    if (!owns.rows[0]) return reply.status(403).send({ error: 'Not authorized' });
+    return getHistory('project', id);
   });
 
   app.post('/:id/upvote', { preHandler: [(app as any).authenticate] }, async (request, reply) => {

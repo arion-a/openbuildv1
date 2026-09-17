@@ -62,10 +62,10 @@ export async function makerRoutes(app: FastifyInstance) {
               COALESCE(rc.n, 0)::int AS reviews_received,
               COALESCE(bw.n, 0)::int AS shipped_this_week
        FROM users u
-       LEFT JOIN (SELECT owner_id, COUNT(*) n FROM projects GROUP BY owner_id) bc ON bc.owner_id = u.id
-       LEFT JOIN (SELECT author_id, COUNT(*) n FROM ideas GROUP BY author_id) ic ON ic.author_id = u.id
-       LEFT JOIN (SELECT owner_id, COALESCE(SUM(upvotes), 0) s FROM projects GROUP BY owner_id) ps ON ps.owner_id = u.id
-       LEFT JOIN (SELECT author_id, COALESCE(SUM(upvotes), 0) s FROM ideas GROUP BY author_id) istars ON istars.author_id = u.id
+       LEFT JOIN (SELECT owner_id, COUNT(*) n FROM projects WHERE deleted_at IS NULL GROUP BY owner_id) bc ON bc.owner_id = u.id
+       LEFT JOIN (SELECT author_id, COUNT(*) n FROM ideas WHERE deleted_at IS NULL GROUP BY author_id) ic ON ic.author_id = u.id
+       LEFT JOIN (SELECT owner_id, COALESCE(SUM(upvotes), 0) s FROM projects WHERE deleted_at IS NULL GROUP BY owner_id) ps ON ps.owner_id = u.id
+       LEFT JOIN (SELECT author_id, COALESCE(SUM(upvotes), 0) s FROM ideas WHERE deleted_at IS NULL GROUP BY author_id) istars ON istars.author_id = u.id
        LEFT JOIN (
          SELECT p.owner_id, COUNT(*) n
          FROM project_reviews r
@@ -121,7 +121,7 @@ export async function makerRoutes(app: FastifyInstance) {
         `SELECT p.id, p.title, p.tagline, p.domain, p.tools_used, p.status, p.live_url, p.upvotes, p.created_at,
                 (SELECT COUNT(*)::int FROM project_reviews r WHERE r.project_id = p.id) AS review_count
          FROM projects p
-         WHERE p.owner_id = $1
+         WHERE p.owner_id = $1 AND p.deleted_at IS NULL
          ORDER BY p.created_at DESC`,
         [makerId]
       ),
@@ -131,7 +131,7 @@ export async function makerRoutes(app: FastifyInstance) {
                 (SELECT COUNT(*)::int FROM idea_threads t WHERE t.idea_id = i.id) AS thread_count
          FROM ideas i
          LEFT JOIN projects p ON p.id = i.build_id
-         WHERE i.author_id = $1
+         WHERE i.author_id = $1 AND i.deleted_at IS NULL
          ORDER BY i.created_at DESC`,
         [makerId]
       ),

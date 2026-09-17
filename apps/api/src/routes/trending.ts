@@ -20,7 +20,7 @@ export async function trendingRoutes(app: FastifyInstance) {
       SELECT domain, COUNT(*) as idea_count,
         SUM((SELECT COUNT(*) FROM idea_threads WHERE idea_id = ideas.id)) as total_threads
       FROM ideas
-      WHERE domain IS NOT NULL
+      WHERE domain IS NOT NULL AND deleted_at IS NULL
       GROUP BY domain
       ORDER BY idea_count DESC
     `);

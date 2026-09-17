@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ExternalLink, Pencil, Save, X, Star, Send, GitFork, ImagePlus, Loader2, Mail, Download } from 'lucide-react';
+import { ExternalLink, Pencil, Save, X, Star, Send, GitFork, ImagePlus, Loader2, Mail, Download, Trash2, History } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { Avatar } from '../components/Avatar';
@@ -8,6 +8,7 @@ import { MakerLink } from '../components/MakerLink';
 import { Gallery } from '../components/Gallery';
 import { RichText } from '../components/RichText';
 import { ShareMenu } from '../components/ShareMenu';
+import { HistoryPanel } from '../components/HistoryPanel';
 import { imageUploadEnabled, uploadImages } from '../lib/uploadImage';
 
 export function ProjectDetail() {
@@ -23,6 +24,11 @@ export function ProjectDetail() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [joining, setJoining] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [history, setHistory] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [editForm, setEditForm] = useState({
     title: '',
     tagline: '',
@@ -114,6 +120,34 @@ export function ProjectDetail() {
       alert(err.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!id) return;
+    setDeleting(true);
+    try {
+      await api.deleteProject(id);
+      navigate('/buildlive', { replace: true });
+    } catch (err: any) {
+      alert(err.message || 'Could not delete this build.');
+      setDeleting(false);
+    }
+  };
+
+  const toggleHistory = async () => {
+    if (!id) return;
+    const next = !showHistory;
+    setShowHistory(next);
+    if (next && history.length === 0) {
+      setHistoryLoading(true);
+      try {
+        setHistory(await api.getProjectHistory(id));
+      } catch {
+        setHistory([]);
+      } finally {
+        setHistoryLoading(false);
+      }
     }
   };
 
@@ -229,9 +263,37 @@ export function ProjectDetail() {
                 <Pencil size={14} /> Edit
               </button>
             )}
+            {isOwner && (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="btn-ghost inline-flex items-center gap-1.5 px-4 py-2 text-sm text-red-400 hover:text-red-300"
+              >
+                <Trash2 size={14} /> Delete
+              </button>
+            )}
           </div>
         )}
       </div>
+
+      {confirmDelete && (
+        <div className="ob-panel p-4 mb-6 border border-red-400/40 space-y-3">
+          <p className="text-sm">
+            Delete this build? It disappears from every feed and profile immediately. This can't be undone from here — an admin would need direct database access to bring it back, though the record is kept internally for the audit history.
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="btn-ghost px-4 py-2 text-sm text-red-400 hover:text-red-300 border-red-400/60 disabled:opacity-50"
+            >
+              {deleting ? 'Deleting…' : 'Yes, delete it'}
+            </button>
+            <button onClick={() => setConfirmDelete(false)} className="btn-ghost px-4 py-2 text-sm">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {editing ? (
         <input
@@ -526,7 +588,21 @@ export function ProjectDetail() {
             Report
           </button>
         )}
+        {isOwner && (
+          <button
+            onClick={toggleHistory}
+            className="text-xs text-[var(--muted)] hover:text-[var(--cream)] inline-flex items-center gap-1"
+          >
+            <History size={12} /> {showHistory ? 'Hide edit history' : 'Edit history'}
+          </button>
+        )}
       </div>
+
+      {isOwner && showHistory && (
+        <div className="mt-4">
+          {historyLoading ? <p className="text-xs text-[var(--muted)]">Loading…</p> : <HistoryPanel entries={history} />}
+        </div>
+      )}
     </div>
   );
 }

@@ -47,7 +47,7 @@ export async function followRoutes(app: FastifyInstance) {
                     (SELECT COALESCE(AVG(rating), 0) FROM project_reviews r WHERE r.project_id = p.id)::float AS avg_rating
              FROM projects p
              JOIN users u ON u.id = p.owner_id
-             WHERE p.owner_id IN (SELECT followee_id FROM follows WHERE follower_id = $1)
+             WHERE p.owner_id IN (SELECT followee_id FROM follows WHERE follower_id = $1) AND p.deleted_at IS NULL
              ORDER BY p.created_at DESC LIMIT 40`,
             [me]
           );
@@ -61,7 +61,7 @@ export async function followRoutes(app: FastifyInstance) {
                     (SELECT COUNT(*) FROM idea_threads WHERE idea_id = i.id) AS thread_count
              FROM ideas i
              JOIN users u ON u.id = i.author_id
-             WHERE i.author_id IN (SELECT followee_id FROM follows WHERE follower_id = $1)
+             WHERE i.author_id IN (SELECT followee_id FROM follows WHERE follower_id = $1) AND i.deleted_at IS NULL
              ORDER BY i.created_at DESC LIMIT 40`,
             [me]
           );

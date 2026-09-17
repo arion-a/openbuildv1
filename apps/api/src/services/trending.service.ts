@@ -24,6 +24,7 @@ export const trendingService = {
         FROM idea_threads
         GROUP BY idea_id
       ) tc ON tc.idea_id = i.id
+      WHERE i.deleted_at IS NULL
       ORDER BY score DESC
       LIMIT 50
     `);
@@ -35,7 +36,7 @@ export const trendingService = {
        FROM trending_ideas t
        JOIN ideas i ON t.idea_id = i.id
        JOIN users u ON i.author_id = u.id
-       WHERE t.period = 'daily'
+       WHERE t.period = 'daily' AND i.deleted_at IS NULL
        ORDER BY t.score DESC
        LIMIT $1`,
       [limit]
@@ -60,6 +61,7 @@ export const trendingService = {
        FROM projects p
        JOIN users u ON u.id = p.owner_id
        LEFT JOIN (SELECT project_id, COUNT(*) n FROM project_reviews GROUP BY project_id) rc ON rc.project_id = p.id
+       WHERE p.deleted_at IS NULL
        ORDER BY score DESC, p.created_at DESC
        LIMIT $1`,
       [limit]

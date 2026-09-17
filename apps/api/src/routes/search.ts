@@ -27,7 +27,7 @@ export async function searchRoutes(app: FastifyInstance) {
              FROM projects p
              JOIN users u ON u.id = p.owner_id,
                   websearch_to_tsquery('english', $1) query
-             WHERE p.search_tsv @@ query
+             WHERE p.search_tsv @@ query AND p.deleted_at IS NULL
              ORDER BY rank DESC, p.created_at DESC
              LIMIT $2`,
             [q, limit]
@@ -42,7 +42,7 @@ export async function searchRoutes(app: FastifyInstance) {
              FROM ideas i
              JOIN users u ON u.id = i.author_id,
                   websearch_to_tsquery('english', $1) query
-             WHERE i.search_tsv @@ query
+             WHERE i.search_tsv @@ query AND i.deleted_at IS NULL
              ORDER BY rank DESC, i.created_at DESC
              LIMIT $2`,
             [q, limit]

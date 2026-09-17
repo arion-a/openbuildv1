@@ -197,6 +197,26 @@ export async function ensureEmailOtpTable() {
   `);
 }
 
+/** Edit/delete on published content: soft-delete + a full audit trail. */
+export async function ensureContentLifecycleTables() {
+  await pool.query(`
+    ALTER TABLE projects ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;
+    ALTER TABLE ideas ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;
+
+    CREATE TABLE IF NOT EXISTS content_audit_log (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      entity_type VARCHAR(20) NOT NULL CHECK (entity_type IN ('project', 'idea')),
+      entity_id UUID NOT NULL,
+      action VARCHAR(20) NOT NULL CHECK (action IN ('edit', 'delete')),
+      actor_id UUID REFERENCES users(id) ON DELETE SET NULL,
+      before JSONB,
+      after JSONB,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_content_audit_log_entity ON content_audit_log (entity_type, entity_id, created_at DESC);
+  `);
+}
+
 /** Showcase: long description + ordered media (image URLs) for builds and ideas. */
 export async function ensureShowcaseColumns() {
   await pool.query(`

@@ -4,6 +4,8 @@ import { llmService } from '../services/llm.service.js';
 import { firebaseAdmin } from '../config/firebase.js';
 import { createLive, PublishError } from '../services/publish.service.js';
 import { notify } from '../services/notify.js';
+import { getHistory, logDelete, logEdit } from '../services/audit.service.js';
+import { sanitizeMedia } from '../services/publish.service.js';
 
 async function extractUserId(app: FastifyInstance, request: any): Promise<string | null> {
   const authHeader = request.headers.authorization;
@@ -38,7 +40,7 @@ export async function ideaRoutes(app: FastifyInstance) {
         (SELECT COUNT(*) FROM idea_threads WHERE idea_id = i.id) as thread_count
       FROM ideas i
       JOIN users u ON i.author_id = u.id
-      WHERE 1=1
+      WHERE i.deleted_at IS NULL
     `;
     const params: any[] = [];
     let paramIdx = 1;
@@ -119,7 +121,7 @@ export async function ideaRoutes(app: FastifyInstance) {
        FROM ideas i
        JOIN users u ON i.author_id = u.id
        LEFT JOIN projects p ON p.id = i.build_id
-       WHERE i.id = $1`,
+       WHERE i.id = $1 AND i.deleted_at IS NULL`,
       [id]
     );
     if (!res.rows[0]) return reply.status(404).send({ error: 'Not found' });
@@ -218,5 +220,60 @@ export async function ideaRoutes(app: FastifyInstance) {
     const { id } = request.params as any;
     const result = await llmService.summariseDiscussion(id);
     return result;
+  });
+
+  // Update idea (author only)
+  app.put('/:id', { preHandler: [(app as any).authenticate] }, async (request, reply) => {
+    const { id } = request.params as any;
+    const { id: userId } = (request as any).user;
+    const { title, body, domain, media } = request.body as any;
+
+    const before = await pool.query('SELECT * FROM ideas WHERE id = $1 AND author_id = $2 AND deleted_at IS NULL', [id, userId]);
+    if (!before.rows[0]) return reply.status(403).send({ error: 'Not authorized' });
+
+    const res = await pool.query(
+      `UPDATE ideas SET
+        title = COALESCE($2, title),
+        body = COALESCE($3, body),
+        domain = COALESCE($4, domain),
+        media = COALESCE($5, media)
+       WHERE id = $1 AND author_id = $6
+       RETURNING *`,
+      [
+        id,
+        title || null,
+        body !== undefined ? (body || null) : null,
+        domain !== undefined ? (domain || null) : null,
+        media !== undefined ? JSON.stringify(sanitizeMedia(media)) : null,
+        userId,
+      ]
+    );
+    if (!res.rows[0]) return reply.status(403).send({ error: 'Not authorized' });
+    await logEdit('idea', id, userId, before.rows[0], res.rows[0]);
+    return res.rows[0];
+  });
+
+  // Soft delete (author only) — keeps the row (and its audit trail) but hides
+  // it from every public listing/detail query.
+  app.delete('/:id', { preHandler: [(app as any).authenticate] }, async (request, reply) => {
+    const { id } = request.params as any;
+    const { id: userId } = (request as any).user;
+
+    const res = await pool.query(
+      `UPDATE ideas SET deleted_at = NOW() WHERE id = $1 AND author_id = $2 AND deleted_at IS NULL RETURNING *`,
+      [id, userId]
+    );
+    if (!res.rows[0]) return reply.status(403).send({ error: 'Not authorized' });
+    await logDelete('idea', id, userId, res.rows[0]);
+    return { deleted: true };
+  });
+
+  // Edit/delete history (author only)
+  app.get('/:id/history', { preHandler: [(app as any).authenticate] }, async (request, reply) => {
+    const { id } = request.params as any;
+    const { id: userId } = (request as any).user;
+    const owns = await pool.query('SELECT 1 FROM ideas WHERE id = $1 AND author_id = $2', [id, userId]);
+    if (!owns.rows[0]) return reply.status(403).send({ error: 'Not authorized' });
+    return getHistory('idea', id);
   });
 }
