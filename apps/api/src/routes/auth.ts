@@ -1,12 +1,20 @@
 import { FastifyInstance } from 'fastify';
-import { randomBytes, scrypt, timingSafeEqual } from 'crypto';
+import { randomBytes, randomInt, scrypt, createHash, timingSafeEqual } from 'crypto';
 import { promisify } from 'util';
 import { pool } from '../db/pool.js';
 import { gitService } from '../services/git.service.js';
 import { firebaseAdmin } from '../config/firebase.js';
+import { sendMail } from '../services/mailer.service.js';
 import { config, encrypt, decrypt, giteaWebBase } from '../config/env.js';
 
 const scryptAsync = promisify(scrypt);
+
+const OTP_TTL_MINUTES = 10;
+const OTP_MAX_ATTEMPTS = 5;
+
+function hashOtp(code: string) {
+  return createHash('sha256').update(code).digest('hex');
+}
 
 async function hashPassword(password: string) {
   const salt = randomBytes(16).toString('hex');
@@ -294,6 +302,84 @@ export async function authRoutes(app: FastifyInstance) {
     return { token: jwtToken, user };
   });
 
+  // Fallback sign-in when a password attempt fails: email a one-time code and
+  // exchange it for the same kind of JWT /local issues. Works for any account
+  // that has an email on file, Firebase-backed or local — /authenticate
+  // accepts a locally-signed JWT either way.
+  app.post('/otp/request', async (request, reply) => {
+    const body = (request.body || {}) as { email?: string };
+    const email = (body.email || '').trim().toLowerCase();
+    if (!email || !email.includes('@')) {
+      return reply.status(400).send({ message: 'Need a real email address' });
+    }
+
+    const user = (await pool.query('SELECT id FROM users WHERE email = $1', [email])).rows[0];
+    // Same response whether or not the email has an account — don't let this
+    // endpoint be used to check which emails are registered.
+    if (user) {
+      const recent = (await pool.query(
+        `SELECT created_at FROM email_otp_codes WHERE email = $1 AND consumed_at IS NULL
+         ORDER BY created_at DESC LIMIT 1`,
+        [email]
+      )).rows[0];
+      if (!recent || Date.now() - new Date(recent.created_at).getTime() > 60_000) {
+        const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
+        const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60_000);
+        await pool.query(
+          `INSERT INTO email_otp_codes (email, code_hash, expires_at) VALUES ($1, $2, $3)`,
+          [email, hashOtp(code), expiresAt]
+        );
+        await sendMail({
+          to: email,
+          subject: 'Your OpenBuild sign-in code',
+          text: `Your one-time code is ${code}. It expires in ${OTP_TTL_MINUTES} minutes. If you didn't request this, you can ignore this email.`,
+        });
+      }
+    }
+    return { message: 'If that email has an account, a code is on its way.' };
+  });
+
+  app.post('/otp/verify', async (request, reply) => {
+    const body = (request.body || {}) as { email?: string; code?: string };
+    const email = (body.email || '').trim().toLowerCase();
+    const code = (body.code || '').trim();
+    if (!email || !code) {
+      return reply.status(400).send({ message: 'Need an email and code' });
+    }
+
+    const row = (await pool.query(
+      `SELECT id, code_hash, expires_at, attempts FROM email_otp_codes
+       WHERE email = $1 AND consumed_at IS NULL
+       ORDER BY created_at DESC LIMIT 1`,
+      [email]
+    )).rows[0];
+
+    const expired = !row || new Date(row.expires_at) < new Date() || row.attempts >= OTP_MAX_ATTEMPTS;
+    if (expired) {
+      return reply.status(401).send({ message: 'That code is invalid or expired. Request a new one.' });
+    }
+
+    const given = Buffer.from(hashOtp(code));
+    const expected = Buffer.from(row.code_hash);
+    if (given.length !== expected.length || !timingSafeEqual(given, expected)) {
+      await pool.query('UPDATE email_otp_codes SET attempts = attempts + 1 WHERE id = $1', [row.id]);
+      return reply.status(401).send({ message: 'That code is wrong. Try again.' });
+    }
+
+    await pool.query('UPDATE email_otp_codes SET consumed_at = NOW() WHERE id = $1', [row.id]);
+
+    const user = (await pool.query(
+      'SELECT id, username, display_name, email, avatar_url, bio FROM users WHERE email = $1',
+      [email]
+    )).rows[0];
+    if (!user) {
+      return reply.status(404).send({ message: 'No account found for that email.' });
+    }
+
+    const jwtToken = app.jwt.sign({ id: user.id, username: user.username }, { expiresIn: '7d' });
+    return { token: jwtToken, user };
+  });
+
   app.get('/username-available', { preHandler: [(app as any).authenticate] }, async (request) => {
     const { id } = (request as any).user;
     const normalized = normalizeHandle((request.query as any)?.u);
@@ -329,8 +415,11 @@ export async function authRoutes(app: FastifyInstance) {
       lovable_url: user.lovable_url,
       replit_url: user.replit_url,
       bolt_url: user.bolt_url,
-      gitea_url: giteaWebBase() || 'http://localhost:3000',
-      gitea_password: user.gitea_password ? decrypt(user.gitea_password) : null,
+      // Only real when this deployment actually provisions Gitea accounts —
+      // otherwise there's no matching account behind these, so don't show a
+      // dev-only fallback URL or a password for infrastructure that isn't there.
+      gitea_url: config.gitea.autoProvision ? giteaWebBase() || null : null,
+      gitea_password: config.gitea.autoProvision && user.gitea_password ? decrypt(user.gitea_password) : null,
     };
   });
 

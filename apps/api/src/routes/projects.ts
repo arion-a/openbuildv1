@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { pool } from '../db/pool.js';
 import { gitService } from '../services/git.service.js';
-import { decrypt, giteaWebBase } from '../config/env.js';
+import { config, decrypt, giteaWebBase } from '../config/env.js';
 import { firebaseAdmin } from '../config/firebase.js';
 import { cleanHttpUrl, createLive, sanitizeMedia, PublishError } from '../services/publish.service.js';
 import { notify } from '../services/notify.js';
@@ -13,7 +13,11 @@ import { pipeline } from 'stream/promises';
 import { execFileSync } from 'child_process';
 
 function withGitUrl(row: any) {
-  const base = giteaWebBase();
+  // Only a deployment that actually provisions Gitea repos has a real URL
+  // behind this — otherwise GITEA_URL is just whatever's in .env.example
+  // (typically http://localhost:3000), which would be a broken link for
+  // every real visitor.
+  const base = config.gitea.autoProvision ? giteaWebBase() : '';
   return { ...row, git_url: row.repo_name && base ? `${base}/${row.repo_name}` : null };
 }
 

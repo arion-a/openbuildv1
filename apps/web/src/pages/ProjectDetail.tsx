@@ -39,7 +39,10 @@ export function ProjectDetail() {
   const { isLoggedIn, user } = useAuth();
   const navigate = useNavigate();
   const isOwner = project && user && project.owner_id === user.id;
-  const sourceUrl = project?.git_url || (project?.repo_name ? `http://localhost:3000/${project.repo_name}` : null);
+  // Don't guess a Gitea URL from repo_name alone — this deployment may not run
+  // Gitea, or may run it somewhere other than localhost. Only link out when
+  // the backend actually gave us a real git_url.
+  const sourceUrl = project?.git_url || null;
 
   useEffect(() => {
     if (!id) return;
