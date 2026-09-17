@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.52.0",
+    "@aws-sdk/client-sesv2": "^3.1134.0",
     "@fastify/cors": "^11.0.0",
     "@fastify/jwt": "^9.0.0",
     "@fastify/multipart": "^10.0.0",
