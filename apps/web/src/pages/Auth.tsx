@@ -137,15 +137,20 @@ export function Auth() {
       }
       if (!auth) return;
       let cred;
+      let displayNameJustSet = false;
       if (mode === 'signin') {
         cred = await signInWithEmailAndPassword(auth, email, password);
       } else {
         cred = await createUserWithEmailAndPassword(auth, email, password);
         if (username) {
           await updateProfile(cred.user, { displayName: username });
+          displayNameJustSet = true;
         }
       }
-      const idToken = await cred.user.getIdToken();
+      // getIdToken() alone can return a token cached from before updateProfile
+      // ran, missing the new displayName — the backend then falls back to the
+      // username for display_name. Force a refresh so the name claim is current.
+      const idToken = await cred.user.getIdToken(displayNameJustSet);
       const data = await syncWithBackend(idToken);
       afterLogin(data.user.username, mode === 'signup');
     } catch (err: any) {
