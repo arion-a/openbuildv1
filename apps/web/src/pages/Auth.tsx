@@ -8,25 +8,43 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
+  sendPasswordResetEmail,
   updateProfile,
   getAdditionalUserInfo,
 } from '../lib/firebase';
 import { useAuth } from '../hooks/useAuth';
 import { passwordOk, passwordChecks, PASSWORD_HINT } from '../lib/password';
+import { api } from '../lib/api';
 
 type Mode = 'choose' | 'signin' | 'signup';
+
+const WRONG_PASSWORD_CODES = new Set(['auth/wrong-password', 'auth/invalid-credential', 'auth/user-not-found']);
+
+function isWrongPasswordError(err: any) {
+  return WRONG_PASSWORD_CODES.has(err?.code) || /wrong$/i.test(String(err?.message || '').trim());
+}
+
+function isEmailInUseError(err: any) {
+  return err?.code === 'auth/email-already-in-use' || /already has an account/i.test(String(err?.message || ''));
+}
 
 function authErrorMessage(err: any) {
   const code = err?.code || '';
   const raw = String(err?.message || '').replace('Firebase: ', '');
   if (code === 'auth/configuration-not-found' || raw.includes('configuration-not-found')) {
-    return 'GitHub/Google are not available until Firebase Authentication is turned on in the Firebase console. On localhost, go back and create an account with email and password.';
+    return 'GitHub/Google sign-in isn’t available right now — use email instead.';
+  }
+  if (isEmailInUseError(err)) {
+    return 'That email already has an account.';
+  }
+  if (isWrongPasswordError(err)) {
+    return 'That email or password is wrong.';
   }
   if (code === 'auth/popup-blocked') {
-    return 'The browser blocked the sign-in window. Use email, or allow pop-ups for localhost.';
+    return 'The browser blocked the sign-in window. Allow pop-ups and try again.';
   }
   if (code === 'auth/network-request-failed' || /Failed to fetch|ECONNREFUSED/i.test(raw)) {
-    return 'Could not reach the Auth emulator. From the repo root run npm run dev (it starts the emulator on port 9099).';
+    return 'Could not reach the auth service. Check your connection and try again.';
   }
   return raw || 'Something went wrong';
 }
@@ -49,8 +67,20 @@ export function Auth() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [recoverableError, setRecoverableError] = useState<null | 'wrong-password' | 'email-in-use'>(null);
+  const [otpStage, setOtpStage] = useState<'idle' | 'sent'>('idle');
+  const [otpCode, setOtpCode] = useState('');
   const navigate = useNavigate();
   const { isLoggedIn, user, setUser } = useAuth();
+
+  const resetAuthFlowState = () => {
+    setError('');
+    setResetSent(false);
+    setRecoverableError(null);
+    setOtpStage('idle');
+    setOtpCode('');
+  };
 
   const afterLogin = (handle: string, isNew = false) => {
     const stored = sessionStorage.getItem('ob_auth_next');
@@ -86,7 +116,7 @@ export function Auth() {
 
   const handleEmail = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    resetAuthFlowState();
     if (mode === 'signup' && !passwordOk(password)) {
       setError(PASSWORD_HINT);
       return;
@@ -94,7 +124,6 @@ export function Auth() {
     setLoading(true);
     try {
       if (import.meta.env.DEV) {
-        const { api } = await import('../lib/api');
         const data = await api.localAuth({
           email,
           password,
@@ -119,6 +148,66 @@ export function Auth() {
       const idToken = await cred.user.getIdToken();
       const data = await syncWithBackend(idToken);
       afterLogin(data.user.username, mode === 'signup');
+    } catch (err: any) {
+      setError(authErrorMessage(err));
+      if (mode === 'signin' && isWrongPasswordError(err)) {
+        setRecoverableError('wrong-password');
+      } else if (mode === 'signup' && isEmailInUseError(err)) {
+        setRecoverableError('email-in-use');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setError('Enter your email above first, then tap Forgot password.');
+      return;
+    }
+    setError('');
+    setLoading(true);
+    try {
+      // Local dev accounts (created via /auth/local) aren't real Firebase
+      // users, so a Firebase reset email wouldn't reach anyone — use the same
+      // one-time-code path a wrong-password attempt offers instead.
+      if (import.meta.env.DEV || !auth) {
+        await api.requestOtp(email);
+        setOtpStage('sent');
+      } else {
+        await sendPasswordResetEmail(auth, email);
+        setResetSent(true);
+      }
+    } catch (err: any) {
+      setError(authErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRequestOtp = async () => {
+    if (!email) return;
+    setError('');
+    setLoading(true);
+    try {
+      await api.requestOtp(email);
+      setOtpStage('sent');
+    } catch (err: any) {
+      setError(authErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const data = await api.verifyOtp(email, otpCode);
+      if (data.token) localStorage.setItem('ob_jwt', data.token);
+      setUser(data.user);
+      afterLogin(data.user.username);
     } catch (err: any) {
       setError(authErrorMessage(err));
     } finally {
@@ -177,11 +266,6 @@ export function Auth() {
         </div>
 
         <div className="ob-card p-6">
-          {import.meta.env.DEV && (
-            <p className="text-[var(--muted)] text-sm mb-5 leading-relaxed">
-              Use email and password here. GitHub/Google need Firebase Authentication enabled in the console.
-            </p>
-          )}
           {!firebaseConfigured && (
             <p className="text-amber-300 text-sm mb-4 leading-relaxed">
               Sign-in needs Firebase web keys. Copy <span className="font-mono text-amber-200">apps/web/.env.example</span> to <span className="font-mono text-amber-200">apps/web/.env</span>, fill the VITE_FIREBASE_* values, and restart the dev server.
@@ -207,20 +291,17 @@ export function Auth() {
                 Continue with Google
               </button>
               <button
-                onClick={() => { setMode('signup'); setError(''); }}
+                onClick={() => { setMode('signup'); resetAuthFlowState(); }}
                 className="btn-ghost w-full py-3"
               >
                 Create a new account
               </button>
               <button
-                onClick={() => { setMode('signin'); setError(''); }}
+                onClick={() => { setMode('signin'); resetAuthFlowState(); }}
                 className="w-full py-3 text-sm text-[var(--muted)] hover:text-[var(--cream)] transition"
               >
                 Sign in with email
               </button>
-              <p className="text-xs text-[var(--muted)] pt-2 leading-relaxed">
-                On this computer, email creates a local account. GitHub/Google only work after Firebase Authentication is enabled in the Firebase console.
-              </p>
             </div>
           )}
 
@@ -228,7 +309,7 @@ export function Auth() {
             <>
               <button
                 type="button"
-                onClick={() => { setMode('choose'); setError(''); }}
+                onClick={() => { setMode('choose'); resetAuthFlowState(); }}
                 className="text-xs text-[var(--muted)] hover:text-[var(--cream)] mb-4"
               >
                 ← All options
@@ -264,6 +345,15 @@ export function Auth() {
                   autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                   className="ob-input"
                 />
+                {mode === 'signin' && (
+                  <button
+                    type="button"
+                    onClick={handleForgotPassword}
+                    className="text-xs text-[var(--muted)] hover:text-[var(--cream)] -mt-2 block"
+                  >
+                    Forgot password?
+                  </button>
+                )}
                 {mode === 'signup' && (
                   <ul className="text-xs space-y-1 pt-1">
                     {passwordChecks(password).map((c) => (
@@ -281,6 +371,58 @@ export function Auth() {
                   {loading ? '...' : mode === 'signin' ? 'Sign in' : 'Create account'}
                 </button>
               </form>
+
+              {resetSent && (
+                <p className="text-xs text-[var(--gold)] mt-3 leading-relaxed">
+                  If that email has an account, a reset link is on its way.
+                </p>
+              )}
+
+              {recoverableError === 'email-in-use' && (
+                <button
+                  type="button"
+                  onClick={() => { setMode('signin'); resetAuthFlowState(); }}
+                  className="text-xs text-[var(--ember)] mt-3 underline block"
+                >
+                  Sign in instead
+                </button>
+              )}
+
+              {recoverableError === 'wrong-password' && otpStage === 'idle' && (
+                <button
+                  type="button"
+                  onClick={handleRequestOtp}
+                  disabled={loading}
+                  className="text-xs text-[var(--ember)] mt-3 underline block disabled:opacity-50"
+                >
+                  Email me a one-time code instead
+                </button>
+              )}
+
+              {otpStage === 'sent' && (
+                <form onSubmit={handleVerifyOtp} className="space-y-3 mt-3">
+                  <p className="text-xs text-[var(--muted)]">
+                    If that email has an account, we’ve sent a code — enter it below.
+                  </p>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    placeholder="6-digit code"
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value)}
+                    required
+                    className="ob-input"
+                  />
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="btn-ember w-full py-2 text-sm disabled:opacity-50"
+                  >
+                    {loading ? '...' : 'Verify & sign in'}
+                  </button>
+                </form>
+              )}
             </>
           )}
 

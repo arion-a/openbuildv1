@@ -181,6 +181,22 @@ export async function ensureSearchColumns() {
   `);
 }
 
+/** Email OTP: a fallback sign-in path when a password attempt fails. */
+export async function ensureEmailOtpTable() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS email_otp_codes (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      email VARCHAR(255) NOT NULL,
+      code_hash TEXT NOT NULL,
+      expires_at TIMESTAMP NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      consumed_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_email_otp_codes_email ON email_otp_codes (email, created_at DESC);
+  `);
+}
+
 /** Showcase: long description + ordered media (image URLs) for builds and ideas. */
 export async function ensureShowcaseColumns() {
   await pool.query(`

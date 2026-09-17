@@ -69,6 +69,9 @@ export const api = {
     request('/auth/local', { method: 'POST', body: JSON.stringify(data) }),
   me: () => request('/auth/me'),
   checkUsername: (u: string) => request(`/auth/username-available?u=${encodeURIComponent(u)}`),
+  requestOtp: (email: string) => request('/auth/otp/request', { method: 'POST', body: JSON.stringify({ email }) }),
+  verifyOtp: (email: string, code: string) =>
+    request('/auth/otp/verify', { method: 'POST', body: JSON.stringify({ email, code }) }),
   updateProfile: (data: {
     avatar_url?: string;
     bio?: string;
