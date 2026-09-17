@@ -35,16 +35,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const app = Fastify({
   logger: true,
-  // In production the SPA and the API are one Fastify instance on one origin, and
-  // the browser calls /api/*. (Dev has a Vite proxy that strips the prefix.)
-  // Strip /api here — before routing — so /api/waitlist reaches the /waitlist route
-  // instead of falling through to index.html.
-  rewriteUrl(req) {
-    const url = req.url || '/';
-    if (url === '/api' || url === '/api/') return '/';
-    if (url.startsWith('/api/')) return url.slice(4);
-    return url;
-  },
 });
 
 await app.register(cors, {
@@ -130,22 +120,30 @@ await ensureModerationTables().catch((err) => {
   app.log.warn({ err }, 'ensureModerationTables failed');
 });
 
-await app.register(authRoutes, { prefix: '/auth' });
-await app.register(waitlistRoutes, { prefix: '/waitlist' });
-await app.register(makerRoutes, { prefix: '/makers' });
-await app.register(projectRoutes, { prefix: '/projects' });
-await app.register(sessionRoutes, { prefix: '/sessions' });
-await app.register(ideaRoutes, { prefix: '/ideas' });
-await app.register(publicationRoutes, { prefix: '/publications' });
-await app.register(searchRoutes, { prefix: '/search' });
-await app.register(messageRoutes, { prefix: '/messages' });
-await app.register(notificationRoutes, { prefix: '/notifications' });
-await app.register(followRoutes, { prefix: '/follows' });
-await app.register(reportRoutes, { prefix: '/report' });
-await app.register(trendingRoutes, { prefix: '/trending' });
-await app.register(settingsRoutes, { prefix: '/settings' });
+// Namespaced under /api so these never collide with SPA page routes of the
+// same name (e.g. the /auth, /makers, /settings, /search, /messages and
+// /notifications pages) — those used to be shadowed or intercepted by these
+// routes when reached bare, since @fastify/static's wildcard only wins when
+// no other route matches first.
+await app.register(authRoutes, { prefix: '/api/auth' });
+await app.register(waitlistRoutes, { prefix: '/api/waitlist' });
+await app.register(makerRoutes, { prefix: '/api/makers' });
+await app.register(projectRoutes, { prefix: '/api/projects' });
+await app.register(sessionRoutes, { prefix: '/api/sessions' });
+await app.register(ideaRoutes, { prefix: '/api/ideas' });
+await app.register(publicationRoutes, { prefix: '/api/publications' });
+await app.register(searchRoutes, { prefix: '/api/search' });
+await app.register(messageRoutes, { prefix: '/api/messages' });
+await app.register(notificationRoutes, { prefix: '/api/notifications' });
+await app.register(followRoutes, { prefix: '/api/follows' });
+await app.register(reportRoutes, { prefix: '/api/report' });
+await app.register(trendingRoutes, { prefix: '/api/trending' });
+await app.register(settingsRoutes, { prefix: '/api/settings' });
+await app.register(pullRoutes, { prefix: '/api/pulls' });
+
+// Not under /api: reached directly (native WebSocket, iframe/subdomain
+// proxying), not through the browser's /api fetch wrapper.
 await app.register(wsRoutes, { prefix: '/ws' });
-await app.register(pullRoutes, { prefix: '/pulls' });
 await app.register(sessionProxyRoutes, { prefix: '/proxy' });
 await app.register(sessionSubdomainRoutes);
 
@@ -159,14 +157,13 @@ if (existsSync(webDist)) {
   registerMetaRoutes(app, webDist);
   await app.register(fastifyStatic, { root: webDist, wildcard: true, prefix: '/' });
   app.setNotFoundHandler((request, reply) => {
-        if (request.url.startsWith('/auth') || request.url.startsWith('/waitlist') || request.url.startsWith('/makers') || request.url.startsWith('/projects') ||
-        request.url.startsWith('/sessions') || request.url.startsWith('/ideas') ||
-        request.url.startsWith('/trending') || request.url.startsWith('/settings') ||
-        request.url.startsWith('/publications') || request.url.startsWith('/search') ||
-        request.url.startsWith('/messages') || request.url.startsWith('/notifications') ||
-        request.url.startsWith('/follows') || request.url.startsWith('/report') ||
-        request.url.startsWith('/ws') || request.url.startsWith('/pulls') ||
-        request.url.startsWith('/proxy') || request.url.startsWith('/health')) {
+    const isApiPath =
+      request.url === '/api' ||
+      request.url.startsWith('/api/') ||
+      request.url.startsWith('/ws') ||
+      request.url.startsWith('/proxy') ||
+      request.url === '/health';
+    if (isApiPath) {
       reply.status(404).send({ error: 'Not found' });
     } else {
       (reply as any).sendFile('index.html');
