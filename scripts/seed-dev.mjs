@@ -2,7 +2,7 @@
 // cross-engagement so trending / ratings / feeds have real signal.
 //
 //   node scripts/seed-dev.mjs           # reset demo rows + reseed
-//   API=http://127.0.0.1:41935 node scripts/seed-dev.mjs
+//   API=http://127.0.0.1:41935/api node scripts/seed-dev.mjs
 //
 // "Reset" only touches accounts whose email ends in @demo.local (plus the two
 // legacy @dev.local demo users). Real accounts are never touched.
@@ -10,7 +10,7 @@
 import pg from 'pg';
 import crypto from 'crypto';
 
-const API = process.env.API || 'http://127.0.0.1:41935';
+const API = process.env.API || 'http://127.0.0.1:41935/api';
 const DB = process.env.DATABASE_URL || 'postgres://openbuild:password@localhost:5432/openbuild';
 const JWT_SECRET = process.env.JWT_SECRET || '';
 const PASSWORD = 'Testpass1!';
