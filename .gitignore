@@ -2,6 +2,11 @@ node_modules/
 dist/
 .env
 
+# Coding-session repo clones (SESSIONS_DIR, when it's a path under the repo) —
+# runtime state, not source; leaving these untracked-but-not-ignored made
+# `git clean -fd` in the deploy script try (and fail) to delete them.
+/sessions/
+
 # Sensitive files
 *.pem
 *-firebase-adminsdk-*.json
