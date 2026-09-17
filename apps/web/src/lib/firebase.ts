@@ -5,8 +5,6 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
   GoogleAuthProvider,
   GithubAuthProvider,
   getAdditionalUserInfo,
@@ -65,14 +63,12 @@ if (firebaseConfigured) {
   githubProvider.addScope('read:user');
 }
 
-export { auth, googleProvider, githubProvider, browserPopupRedirectResolver };
+export { auth, googleProvider, githubProvider };
 
 export {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
   GithubAuthProvider,
   getAdditionalUserInfo,
   signOut,
