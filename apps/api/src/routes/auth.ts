@@ -16,6 +16,31 @@ function hashOtp(code: string) {
   return createHash('sha256').update(code).digest('hex');
 }
 
+/** Consumes a still-valid code for `email` on success. */
+async function verifyOtpCode(email: string, code: string): Promise<{ ok: true } | { ok: false; message: string }> {
+  const row = (await pool.query(
+    `SELECT id, code_hash, expires_at, attempts FROM email_otp_codes
+     WHERE email = $1 AND consumed_at IS NULL
+     ORDER BY created_at DESC LIMIT 1`,
+    [email]
+  )).rows[0];
+
+  const expired = !row || new Date(row.expires_at) < new Date() || row.attempts >= OTP_MAX_ATTEMPTS;
+  if (expired) {
+    return { ok: false, message: 'That code is invalid or expired. Request a new one.' };
+  }
+
+  const given = Buffer.from(hashOtp(code));
+  const expected = Buffer.from(row.code_hash);
+  if (given.length !== expected.length || !timingSafeEqual(given, expected)) {
+    await pool.query('UPDATE email_otp_codes SET attempts = attempts + 1 WHERE id = $1', [row.id]);
+    return { ok: false, message: 'That code is wrong. Try again.' };
+  }
+
+  await pool.query('UPDATE email_otp_codes SET consumed_at = NOW() WHERE id = $1', [row.id]);
+  return { ok: true };
+}
+
 async function hashPassword(password: string) {
   const salt = randomBytes(16).toString('hex');
   const derived = (await scryptAsync(password, salt, 64)) as Buffer;
@@ -178,7 +203,10 @@ export async function authRoutes(app: FastifyInstance) {
       // Only update firebase_uid if it's currently NULL (first-time link)
       // Never overwrite an existing firebase_uid — that would be an account takeover
       if (res.rows[0].firebase_uid) {
-        return reply.status(403).send({ message: 'Account already linked to a different identity' });
+        return reply.status(409).send({
+          error: 'identity_mismatch',
+          message: 'This email already has an account under a different sign-in method.',
+        });
       }
       await pool.query(
         'UPDATE users SET firebase_uid = $1, email = COALESCE($2, email), avatar_url = COALESCE($3, avatar_url) WHERE id = $4 AND firebase_uid IS NULL',
@@ -347,26 +375,10 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.status(400).send({ message: 'Need an email and code' });
     }
 
-    const row = (await pool.query(
-      `SELECT id, code_hash, expires_at, attempts FROM email_otp_codes
-       WHERE email = $1 AND consumed_at IS NULL
-       ORDER BY created_at DESC LIMIT 1`,
-      [email]
-    )).rows[0];
-
-    const expired = !row || new Date(row.expires_at) < new Date() || row.attempts >= OTP_MAX_ATTEMPTS;
-    if (expired) {
-      return reply.status(401).send({ message: 'That code is invalid or expired. Request a new one.' });
+    const verified = await verifyOtpCode(email, code);
+    if (!verified.ok) {
+      return reply.status(401).send({ message: verified.message });
     }
-
-    const given = Buffer.from(hashOtp(code));
-    const expected = Buffer.from(row.code_hash);
-    if (given.length !== expected.length || !timingSafeEqual(given, expected)) {
-      await pool.query('UPDATE email_otp_codes SET attempts = attempts + 1 WHERE id = $1', [row.id]);
-      return reply.status(401).send({ message: 'That code is wrong. Try again.' });
-    }
-
-    await pool.query('UPDATE email_otp_codes SET consumed_at = NOW() WHERE id = $1', [row.id]);
 
     const user = (await pool.query(
       'SELECT id, username, display_name, email, avatar_url, bio FROM users WHERE email = $1',
@@ -378,6 +390,60 @@ export async function authRoutes(app: FastifyInstance) {
 
     const jwtToken = app.jwt.sign({ id: user.id, username: user.username }, { expiresIn: '7d' });
     return { token: jwtToken, user };
+  });
+
+  // When /firebase finds an existing account whose firebase_uid doesn't match
+  // the presented token — e.g. this email first signed up via Google and is
+  // now signing in with a password, which Firebase treats as a different
+  // identity — relink it here instead of leaving the user stuck. Requires
+  // BOTH a valid Firebase token for the email (proves they can currently log
+  // in as it) AND a fresh emailed code (proves they own the inbox), so this
+  // can't be used to take over someone else's account.
+  app.post('/relink', async (request, reply) => {
+    const authHeader = request.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return reply.status(401).send({ message: 'Missing token' });
+    }
+    const idToken = authHeader.split('Bearer ')[1];
+    let decoded;
+    try {
+      decoded = await firebaseAdmin.auth().verifyIdToken(idToken);
+    } catch (err) {
+      request.log.error({ err: (err as Error)?.message }, 'verifyIdToken failed (/auth/relink)');
+      return reply.status(401).send({ message: 'Invalid Firebase token' });
+    }
+    const { uid, email, picture } = decoded;
+    const { code } = (request.body || {}) as { code?: string };
+    if (!email || !code) {
+      return reply.status(400).send({ message: 'Need a code' });
+    }
+
+    const verified = await verifyOtpCode(email.trim().toLowerCase(), String(code).trim());
+    if (!verified.ok) {
+      return reply.status(401).send({ message: verified.message });
+    }
+
+    const res = await pool.query(
+      `UPDATE users SET firebase_uid = $1, avatar_url = COALESCE($2, avatar_url) WHERE email = $3 RETURNING *`,
+      [uid, picture || null, email]
+    );
+    if (!res.rows[0]) {
+      return reply.status(404).send({ message: 'No account found for that email.' });
+    }
+
+    const user = res.rows[0];
+    const jwtToken = app.jwt.sign({ id: user.id, username: user.username }, { expiresIn: '7d' });
+    return {
+      token: jwtToken,
+      user: {
+        id: user.id,
+        username: user.username,
+        display_name: user.display_name,
+        email: user.email,
+        avatar_url: user.avatar_url,
+        bio: user.bio,
+      },
+    };
   });
 
   app.get('/username-available', { preHandler: [(app as any).authenticate] }, async (request) => {
