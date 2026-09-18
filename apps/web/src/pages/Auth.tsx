@@ -28,11 +28,18 @@ function isEmailInUseError(err: any) {
   return err?.code === 'auth/email-already-in-use' || /already has an account/i.test(String(err?.message || ''));
 }
 
+function isIdentityMismatchError(err: any) {
+  return err?.code === 'identity_mismatch';
+}
+
 function authErrorMessage(err: any) {
   const code = err?.code || '';
   const raw = String(err?.message || '').replace('Firebase: ', '');
   if (code === 'auth/configuration-not-found' || raw.includes('configuration-not-found')) {
     return 'GitHub/Google sign-in isn’t available right now — use email instead.';
+  }
+  if (isIdentityMismatchError(err)) {
+    return 'This email already has an account under a different sign-in method (e.g. Google or GitHub). Verify it’s you to link them.';
   }
   if (isEmailInUseError(err)) {
     return 'That email already has an account.';
@@ -68,9 +75,10 @@ export function Auth() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
-  const [recoverableError, setRecoverableError] = useState<null | 'wrong-password' | 'email-in-use'>(null);
+  const [recoverableError, setRecoverableError] = useState<null | 'wrong-password' | 'email-in-use' | 'identity-mismatch'>(null);
   const [otpStage, setOtpStage] = useState<'idle' | 'sent'>('idle');
   const [otpCode, setOtpCode] = useState('');
+  const [pendingRelinkToken, setPendingRelinkToken] = useState<string | null>(null);
   const navigate = useNavigate();
   const { isLoggedIn, user, setUser } = useAuth();
 
@@ -80,6 +88,7 @@ export function Auth() {
     setRecoverableError(null);
     setOtpStage('idle');
     setOtpCode('');
+    setPendingRelinkToken(null);
   };
 
   const afterLogin = (handle: string, isNew = false) => {
@@ -109,7 +118,9 @@ export function Auth() {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: 'Backend error' }));
-      throw new Error(err.message || 'Failed to sync with backend');
+      const e: any = new Error(err.message || 'Failed to sync with backend');
+      if (err.error) e.code = err.error;
+      throw e;
     }
     return res.json() as Promise<{ user: { username: string } }>;
   };
@@ -122,6 +133,7 @@ export function Auth() {
       return;
     }
     setLoading(true);
+    let cred: Awaited<ReturnType<typeof signInWithEmailAndPassword>> | undefined;
     try {
       if (import.meta.env.DEV) {
         const data = await api.localAuth({
@@ -136,7 +148,6 @@ export function Auth() {
         return;
       }
       if (!auth) return;
-      let cred;
       let displayNameJustSet = false;
       if (mode === 'signin') {
         cred = await signInWithEmailAndPassword(auth, email, password);
@@ -155,7 +166,13 @@ export function Auth() {
       afterLogin(data.user.username, mode === 'signup');
     } catch (err: any) {
       setError(authErrorMessage(err));
-      if (mode === 'signin' && isWrongPasswordError(err)) {
+      if (isIdentityMismatchError(err)) {
+        const idToken = await cred?.user.getIdToken().catch(() => null);
+        if (idToken) {
+          setPendingRelinkToken(idToken);
+          setRecoverableError('identity-mismatch');
+        }
+      } else if (mode === 'signin' && isWrongPasswordError(err)) {
         setRecoverableError('wrong-password');
       } else if (mode === 'signup' && isEmailInUseError(err)) {
         setRecoverableError('email-in-use');
@@ -220,6 +237,23 @@ export function Auth() {
     }
   };
 
+  const handleVerifyRelink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pendingRelinkToken) return;
+    setError('');
+    setLoading(true);
+    try {
+      const data = await api.relinkIdentity(pendingRelinkToken, otpCode);
+      if (data.token) localStorage.setItem('ob_jwt', data.token);
+      setUser(data.user);
+      afterLogin(data.user.username);
+    } catch (err: any) {
+      setError(authErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleOAuthResult = async (cred: Awaited<ReturnType<typeof signInWithPopup>>) => {
     const info = getAdditionalUserInfo(cred);
     const ghName = info?.username || undefined;
@@ -231,15 +265,31 @@ export function Auth() {
     afterLogin(data.user.username, !!info?.isNewUser);
   };
 
+  const handleIdentityMismatchDuringOAuth = async (
+    err: any,
+    cred: Awaited<ReturnType<typeof signInWithPopup>> | undefined
+  ) => {
+    if (!isIdentityMismatchError(err) || !cred) return false;
+    const idToken = await cred.user.getIdToken().catch(() => null);
+    if (!idToken) return false;
+    if (cred.user.email) setEmail(cred.user.email);
+    setPendingRelinkToken(idToken);
+    setRecoverableError('identity-mismatch');
+    setMode('signin');
+    return true;
+  };
+
   const handleGithub = async () => {
     if (!auth || !githubProvider) return;
     setError('');
     setLoading(true);
+    let cred: Awaited<ReturnType<typeof signInWithPopup>> | undefined;
     try {
-      const cred = await signInWithPopup(auth, githubProvider);
+      cred = await signInWithPopup(auth, githubProvider);
       await handleOAuthResult(cred);
     } catch (err: any) {
       setError(authErrorMessage(err));
+      await handleIdentityMismatchDuringOAuth(err, cred);
     } finally {
       setLoading(false);
     }
@@ -249,11 +299,13 @@ export function Auth() {
     if (!auth || !googleProvider) return;
     setError('');
     setLoading(true);
+    let cred: Awaited<ReturnType<typeof signInWithPopup>> | undefined;
     try {
-      const cred = await signInWithPopup(auth, googleProvider);
+      cred = await signInWithPopup(auth, googleProvider);
       await handleOAuthResult(cred);
     } catch (err: any) {
       setError(authErrorMessage(err));
+      await handleIdentityMismatchDuringOAuth(err, cred);
     } finally {
       setLoading(false);
     }
@@ -404,8 +456,19 @@ export function Auth() {
                 </button>
               )}
 
+              {recoverableError === 'identity-mismatch' && otpStage === 'idle' && (
+                <button
+                  type="button"
+                  onClick={handleRequestOtp}
+                  disabled={loading}
+                  className="text-xs text-[var(--ember)] mt-3 underline block disabled:opacity-50"
+                >
+                  Verify it's you — email me a code
+                </button>
+              )}
+
               {otpStage === 'sent' && (
-                <form onSubmit={handleVerifyOtp} className="space-y-3 mt-3">
+                <form onSubmit={recoverableError === 'identity-mismatch' ? handleVerifyRelink : handleVerifyOtp} className="space-y-3 mt-3">
                   <p className="text-xs text-[var(--muted)]">
                     If that email has an account, we’ve sent a code — enter it below.
                   </p>

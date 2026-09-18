@@ -72,6 +72,18 @@ export const api = {
   requestOtp: (email: string) => request('/auth/otp/request', { method: 'POST', body: JSON.stringify({ email }) }),
   verifyOtp: (email: string, code: string) =>
     request('/auth/otp/verify', { method: 'POST', body: JSON.stringify({ email, code }) }),
+  relinkIdentity: async (idToken: string, code: string) => {
+    const res = await fetch(`${BASE}/auth/relink`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${idToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: 'Could not verify that code' }));
+      throw new Error(err.message);
+    }
+    return res.json();
+  },
   updateProfile: (data: {
     avatar_url?: string;
     bio?: string;
