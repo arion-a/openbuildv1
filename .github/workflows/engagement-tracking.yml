@@ -15,7 +15,7 @@ jobs:
       - name: Fetch engagement snapshot
         env:
           X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
-          X_USERNAME: ${{ vars.X_USERNAME }}
+          X_USERNAME: ${{ vars.X_USERNAME || secrets.X_USERNAME }}
         run: node .github/scripts/fetch-engagement.mjs > snapshot.json
 
       - name: Checkout data branch
