@@ -1,0 +1,43 @@
+name: Track X Engagement
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  track:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main (for the fetch script)
+        uses: actions/checkout@v4
+
+      - name: Fetch engagement snapshot
+        env:
+          X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
+          X_USERNAME: ${{ vars.X_USERNAME }}
+        run: node .github/scripts/fetch-engagement.mjs > snapshot.json
+
+      - name: Checkout data branch
+        uses: actions/checkout@v4
+        with:
+          ref: data
+          path: data-branch
+
+      - name: Commit snapshot to the data branch
+        run: |
+          set -e
+          mkdir -p data-branch/engagement
+          STAMP=$(date -u +%Y-%m-%dT%H-%M-%SZ)
+          cp snapshot.json "data-branch/engagement/$STAMP.json"
+          cp snapshot.json "data-branch/engagement/latest.json"
+          cd data-branch
+          git config user.name "openbuild-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add engagement
+          if git diff --cached --quiet; then
+            echo "No engagement changes since last run."
+            exit 0
+          fi
+          git commit -m "engagement snapshot $STAMP"
+          git push origin HEAD:data
