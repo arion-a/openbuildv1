@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-OpenBuild is a social platform for building AI-powered projects live in the browser (see [README.md](README.md)). Two main sections: **BuildLive** (live projects people are actively building, joinable by forking + a cloud coding session) and **IdeaStream** (a discussion feed with AI-summarized threads).
+OpenBuild is a digital platform for sharing AI-built products, built live in the browser (see [README.md](README.md)). Two main sections: **BuildLive** (live projects people are actively building, joinable by forking + a cloud coding session) and **IdeaStream** (a discussion feed with AI-summarized threads).
 
 npm workspaces monorepo: `apps/api` (Fastify + Postgres backend) and `apps/web` (React + Vite frontend).
 
