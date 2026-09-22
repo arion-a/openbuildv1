@@ -1,6 +1,6 @@
 # OpenBuild
 
-A social platform for sharing, collaborating on, and building AI-powered projects — live, in the browser.
+A digital platform for sharing AI-built products, where builders can collaborate on and extend each other's projects — live, in the browser.
 
 ## What is OpenBuild?
 
