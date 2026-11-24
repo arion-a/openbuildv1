@@ -56,20 +56,20 @@
 <text x="692" y="367" fill="#cbd5e1" font-size="12">`data` branch.</text>
 <g stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#a)" fill="none"><path d="M450 230 V262" opacity="0"/></g>
 <text x="450" y="424" fill="#e2e8f0" font-size="13.5" font-weight="700" text-anchor="middle">Deploy path</text>
-<rect x="20" y="436" width="160" height="40" rx="8" fill="#1e293b" stroke="#38bdf8"/>
-<text x="100.0" y="461" fill="#f1f5f9" font-size="12" text-anchor="middle">Push to main</text>
-<path d="M182 456 H196" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)" fill="none"/>
-<rect x="200" y="436" width="160" height="40" rx="8" fill="#1e293b" stroke="#38bdf8"/>
+<rect x="35" y="436" width="150" height="40" rx="8" fill="#1e293b" stroke="#38bdf8"/>
+<text x="110.0" y="461" fill="#f1f5f9" font-size="12" text-anchor="middle">Push to main</text>
+<path d="M187 456 H201" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)" fill="none"/>
+<rect x="205" y="436" width="150" height="40" rx="8" fill="#1e293b" stroke="#38bdf8"/>
 <text x="280.0" y="461" fill="#f1f5f9" font-size="12" text-anchor="middle">GitHub Action</text>
-<path d="M362 456 H376" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)" fill="none"/>
-<rect x="380" y="436" width="160" height="40" rx="8" fill="#1e293b" stroke="#38bdf8"/>
-<text x="460.0" y="461" fill="#f1f5f9" font-size="12" text-anchor="middle">SSH to AWS EC2</text>
-<path d="M542 456 H556" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)" fill="none"/>
-<rect x="560" y="436" width="160" height="40" rx="8" fill="#1e293b" stroke="#38bdf8"/>
-<text x="640.0" y="461" fill="#f1f5f9" font-size="12" text-anchor="middle">git reset, npm ci, build</text>
-<path d="M722 456 H736" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)" fill="none"/>
-<rect x="740" y="436" width="160" height="40" rx="8" fill="#1e293b" stroke="#38bdf8"/>
-<text x="820.0" y="461" fill="#f1f5f9" font-size="12" text-anchor="middle">systemd restarts API</text>
+<path d="M357 456 H371" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)" fill="none"/>
+<rect x="375" y="436" width="150" height="40" rx="8" fill="#1e293b" stroke="#38bdf8"/>
+<text x="450.0" y="461" fill="#f1f5f9" font-size="12" text-anchor="middle">SSH to AWS EC2</text>
+<path d="M527 456 H541" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)" fill="none"/>
+<rect x="545" y="436" width="150" height="40" rx="8" fill="#1e293b" stroke="#38bdf8"/>
+<text x="620.0" y="461" fill="#f1f5f9" font-size="12" text-anchor="middle">git reset, npm ci, build</text>
+<path d="M697 456 H711" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)" fill="none"/>
+<rect x="715" y="436" width="150" height="40" rx="8" fill="#1e293b" stroke="#38bdf8"/>
+<text x="790.0" y="461" fill="#f1f5f9" font-size="12" text-anchor="middle">systemd restarts API</text>
 <text x="450" y="506" fill="#94a3b8" font-size="11.5" text-anchor="middle">Caddy (reverse proxy) and cloudflared (tunnel) configs are in the repository root. Firebase is used for sign-in only.</text>
 <text x="450" y="526" fill="#94a3b8" font-size="11.5" text-anchor="middle">No test suite and no build or lint check on pull requests. The only workflows are the deploy and the engagement snapshot.</text>
 </svg>
