@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 560" font-family="Segoe UI,Helvetica,Arial,sans-serif">
+<rect width="900" height="560" rx="14" fill="#0f172a"/>
+<defs><marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#94a3b8"/></marker></defs>
+<text x="450" y="30" fill="#f1f5f9" font-size="18" font-weight="700" text-anchor="middle">OpenBuild: AI builders share projects and ideas, and others join in</text>
+<text x="450" y="50" fill="#94a3b8" font-size="12" text-anchor="middle">What the repository contains. Green = built and part of the default setup. Amber = built but optional or marked dormant.</text>
+<rect x="20" y="70" width="260" height="160" rx="10" fill="#1e293b" stroke="#34d399" stroke-width="1.5"/>
+<text x="32" y="92" fill="#34d399" font-size="13" font-weight="700">Web app (apps/web)</text>
+<text x="32" y="112" fill="#cbd5e1" font-size="12">React 19, Vite, Tailwind, Zustand</text>
+<text x="32" y="129" fill="#cbd5e1" font-size="12">BuildLive: grid of live projects</text>
+<text x="32" y="146" fill="#cbd5e1" font-size="12">IdeaStream: idea feed and threads</text>
+<text x="32" y="163" fill="#cbd5e1" font-size="12">Discover, Search, Makers, Messages,</text>
+<text x="32" y="180" fill="#cbd5e1" font-size="12">Notifications, Publish, Settings</text>
+<text x="32" y="197" fill="#cbd5e1" font-size="12">Landing page: "Opening soon" + waitlist</text>
+<rect x="320" y="70" width="260" height="160" rx="10" fill="#1e293b" stroke="#34d399" stroke-width="1.5"/>
+<text x="332" y="92" fill="#34d399" font-size="13" font-weight="700">API (apps/api)</text>
+<text x="332" y="112" fill="#cbd5e1" font-size="12">Fastify, TypeScript</text>
+<text x="332" y="129" fill="#cbd5e1" font-size="12">19 route modules under /api</text>
+<text x="332" y="146" fill="#cbd5e1" font-size="12">Projects, ideas, upvotes, threads,</text>
+<text x="332" y="163" fill="#cbd5e1" font-size="12">reviews, follows, reports, search</text>
+<text x="332" y="180" fill="#cbd5e1" font-size="12">Jobs: trending ideas, achievements,</text>
+<text x="332" y="197" fill="#cbd5e1" font-size="12">stale-session cleanup</text>
+<rect x="620" y="70" width="260" height="160" rx="10" fill="#1e293b" stroke="#34d399" stroke-width="1.5"/>
+<text x="632" y="92" fill="#34d399" font-size="13" font-weight="700">Data and sign-in</text>
+<text x="632" y="112" fill="#cbd5e1" font-size="12">PostgreSQL: baseline schema</text>
+<text x="632" y="129" fill="#cbd5e1" font-size="12">(16 tables) + 11 migrations</text>
+<text x="632" y="146" fill="#cbd5e1" font-size="12">Sign-in: Firebase ID token</text>
+<text x="632" y="163" fill="#cbd5e1" font-size="12">or the API's own JWT</text>
+<text x="632" y="180" fill="#cbd5e1" font-size="12">Stored tokens and provider keys:</text>
+<text x="632" y="197" fill="#cbd5e1" font-size="12">AES-256-GCM encrypted</text>
+<g stroke="#94a3b8" stroke-width="2" marker-end="url(#a)" fill="none"><path d="M282 150 H318"/><path d="M582 150 H618"/></g>
+<text x="450" y="262" fill="#e2e8f0" font-size="13.5" font-weight="700" text-anchor="middle">Optional or dormant parts, each behind its own setting</text>
+<rect x="20" y="274" width="200" height="120" rx="10" fill="#1e293b" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="32" y="296" fill="#fbbf24" font-size="13" font-weight="700">AI idea summaries</text>
+<text x="32" y="316" fill="#cbd5e1" font-size="12">Anthropic API; needs</text>
+<text x="32" y="333" fill="#cbd5e1" font-size="12">ANTHROPIC_API_KEY.</text>
+<text x="32" y="350" fill="#cbd5e1" font-size="12">Summary is cached until the</text>
+<text x="32" y="367" fill="#cbd5e1" font-size="12">thread count changes.</text>
+<rect x="240" y="274" width="200" height="120" rx="10" fill="#1e293b" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="252" y="296" fill="#fbbf24" font-size="13" font-weight="700">Join a project</text>
+<text x="252" y="316" fill="#cbd5e1" font-size="12">1. Fork the repo on Gitea</text>
+<text x="252" y="333" fill="#cbd5e1" font-size="12">2. Coding session (OpenCode,</text>
+<text x="252" y="350" fill="#cbd5e1" font-size="12">   Docker or local process)</text>
+<text x="252" y="367" fill="#cbd5e1" font-size="12">3. Pull request to the original</text>
+<text x="252" y="384" fill="#cbd5e1" font-size="12">"dormant" in .env.example</text>
+<rect x="460" y="274" width="200" height="120" rx="10" fill="#1e293b" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="472" y="296" fill="#fbbf24" font-size="13" font-weight="700">Email sign-in codes</text>
+<text x="472" y="316" fill="#cbd5e1" font-size="12">AWS SES one-time codes for</text>
+<text x="472" y="333" fill="#cbd5e1" font-size="12">forgot-password.</text>
+<text x="472" y="350" fill="#cbd5e1" font-size="12">Without AWS keys the code</text>
+<text x="472" y="367" fill="#cbd5e1" font-size="12">is only logged.</text>
+<rect x="680" y="274" width="200" height="120" rx="10" fill="#1e293b" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="692" y="296" fill="#fbbf24" font-size="13" font-weight="700">X engagement tracking</text>
+<text x="692" y="316" fill="#cbd5e1" font-size="12">GitHub Action, every 6 hours.</text>
+<text x="692" y="333" fill="#cbd5e1" font-size="12">Needs X_BEARER_TOKEN.</text>
+<text x="692" y="350" fill="#cbd5e1" font-size="12">Writes snapshots to the</text>
+<text x="692" y="367" fill="#cbd5e1" font-size="12">`data` branch.</text>
+<g stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#a)" fill="none"><path d="M450 230 V262" opacity="0"/></g>
+<text x="450" y="424" fill="#e2e8f0" font-size="13.5" font-weight="700" text-anchor="middle">Deploy path</text>
+<rect x="20" y="436" width="160" height="40" rx="8" fill="#1e293b" stroke="#38bdf8"/>
+<text x="100.0" y="461" fill="#f1f5f9" font-size="12" text-anchor="middle">Push to main</text>
+<path d="M182 456 H196" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)" fill="none"/>
+<rect x="200" y="436" width="160" height="40" rx="8" fill="#1e293b" stroke="#38bdf8"/>
+<text x="280.0" y="461" fill="#f1f5f9" font-size="12" text-anchor="middle">GitHub Action</text>
+<path d="M362 456 H376" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)" fill="none"/>
+<rect x="380" y="436" width="160" height="40" rx="8" fill="#1e293b" stroke="#38bdf8"/>
+<text x="460.0" y="461" fill="#f1f5f9" font-size="12" text-anchor="middle">SSH to AWS EC2</text>
+<path d="M542 456 H556" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)" fill="none"/>
+<rect x="560" y="436" width="160" height="40" rx="8" fill="#1e293b" stroke="#38bdf8"/>
+<text x="640.0" y="461" fill="#f1f5f9" font-size="12" text-anchor="middle">git reset, npm ci, build</text>
+<path d="M722 456 H736" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)" fill="none"/>
+<rect x="740" y="436" width="160" height="40" rx="8" fill="#1e293b" stroke="#38bdf8"/>
+<text x="820.0" y="461" fill="#f1f5f9" font-size="12" text-anchor="middle">systemd restarts API</text>
+<text x="450" y="506" fill="#94a3b8" font-size="11.5" text-anchor="middle">Caddy (reverse proxy) and cloudflared (tunnel) configs are in the repository root. Firebase is used for sign-in only.</text>
+<text x="450" y="526" fill="#94a3b8" font-size="11.5" text-anchor="middle">No test suite and no build or lint check on pull requests. The only workflows are the deploy and the engagement snapshot.</text>
+</svg>
